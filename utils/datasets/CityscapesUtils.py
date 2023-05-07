@@ -69,16 +69,15 @@ def get_preprocessing(self, backbone, weight_version):
 class CityscapesTestSplit(Cityscapes):
     def __init__(self, 
                  root: str, 
-                 target_type: List[str] | str = "semantic", 
-                 transform: Callable[..., Any] | None = None, 
-                 transforms: Callable[..., Any] | None = None) -> None:
-        super().__init__(root, 
-                         'test', 
-                         'fine', 
-                         target_type, 
-                         transform, 
+                 transform: Callable[..., Any] | None = None,
+                 ) -> None:
+        super().__init__(root=root,
+                         transform=transform,
+                         split='test', 
+                         mode='fine', 
+                         target_type='semantic',  
                          target_transform=None, 
-                         transforms=transforms)
+                         transforms=None)
         
     def __getitem__(self, index: int) -> Tuple[Any, Any]:
         """
@@ -90,7 +89,8 @@ class CityscapesTestSplit(Cityscapes):
         """
         image_filename = self.images[index]
         image = Image.open(image_filename).convert("RGB")
-        return image, image_filename
+        # need custon collate_fn to return filename
+        return image
 
 
 class CityscapesDataModule(pl.LightningDataModule):
@@ -98,6 +98,7 @@ class CityscapesDataModule(pl.LightningDataModule):
         super().__init__()
         self.datapath = dataset_config['path']
         self.mode = dataset_config.get('mode', 'fine')
+        self.target_type = dataset_config.get('type', 'semantic')
         self.num_classes = dataset_config.get('num_classes', 20)
         self.batch_size = dataset_config.get('batch_size', 3)
         self.target_transform = Compose(
@@ -120,26 +121,27 @@ class CityscapesDataModule(pl.LightningDataModule):
             self.train_ds = Cityscapes(root=self.datapath, 
                                        split='train', 
                                        mode=self.mode,
+                                       target_type=self.target_type,
                                        transform=self.transform,
                                        target_transform=self.target_transform)
             self.val_ds = Cityscapes(root=self.datapath, 
-                                            split='val', 
-                                            mode=self.mode,
-                                            transform=self.transform,
-                                            target_transform=self.target_transform)
+                                     split='val', 
+                                     mode=self.mode,
+                                     target_type=self.target_type,
+                                     transform=self.transform,
+                                     target_transform=self.target_transform)
         
         if stage == 'test':
             self.test_ds = Cityscapes(root=self.datapath, 
-                                            split='val', 
-                                            mode=self.mode,
-                                            transform=self.transform,
-                                            target_transform=self.target_transform)
+                                      split='val', 
+                                      mode=self.mode,
+                                      target_type=self.target_type,
+                                      transform=self.transform,
+                                      target_transform=self.target_transform)
         
         if stage == 'predict':
-            self.predict_ds = CityscapesTestSplit(root=self.datapath, 
-                                                split='test', 
-                                                mode=self.mode,
-                                                transform=self.transform,)
+            self.predict_ds = CityscapesTestSplit(root=self.datapath,
+                                                  transform=self.transform)
     
     def train_dataloader(self):
         return DataLoader(self.train_ds, self.batch_size, shuffle=True, num_workers=4)
@@ -151,7 +153,7 @@ class CityscapesDataModule(pl.LightningDataModule):
         return DataLoader(self.test_ds, self.batch_size, shuffle=False, num_workers=4)
         
     def predict_dataloader(self):
-        return DataLoader(self.predict_ds, self.batch_size, shuffle=False, num_workers=4)
+        return DataLoader(self.predict_ds, batch_size = 1, shuffle=False, num_workers=4)
 
 
 # dictionary that contains the mapping of the class numbers to rgb color values

@@ -14,12 +14,12 @@ dataset_config:
   name: Cityscapes
   path: /mnt/dataset/Cityscapes/
   version: fine
-  num_train_images: 50 # 1.0 means 100% 
-  num_eval_images: 10
+  batch_size: 6
+  num_train_batches: 50 # 1.0 means 100% 
+  num_eval_batches: 10
   seed: 80
 
 train_config:
-  batch_size: 6
   loss: CrossEntropyLoss
   epochs: 5
   optimizer:
@@ -37,7 +37,7 @@ train_config:
   augmentation: 
     # a list of augmentations to perform
   distribute:
-    strategy: DDP # NOT IMPEMENTED
+    strategy: ddp # NOT IMPEMENTED
     devices: 1
   precision: 32
 

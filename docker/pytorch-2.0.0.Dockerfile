@@ -33,9 +33,9 @@ RUN pip install --upgrade pip \
 
 RUN pip install torcheval \
 && pip install torchsummary \
-&& pip install progressbar \
 && pip install torchmetrics \
-&& pip install pytorch-lightning
+&& pip install lightning \
+&& pip install -U tensorboard-plugin-profile
   
 
 RUN git config --global user.name ${USERNAME} \
