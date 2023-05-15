@@ -45,25 +45,7 @@ class OneHot():
         return one_hot_output
     
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}()"
-
-
-def get_preprocessing(self, backbone, weight_version):
-    weights_str = f'{backbone}_Weights.{weight_version}' 
-    # Layer for normalizing input image
-    #default_normalization_layer = tf.keras.layers.Rescaling(scale=1./127.5, offset=-1)
-    preprocessing_options = {
-        'default': ToTensor(),
-        #'ResNet': resnet.preprocess_input,
-        #'ResNetV2' : resnet_v2.preprocess_input,
-        #'MobileNet' : mobilenet.preprocess_input,
-        #'MobileNetV2' : mobilenet_v2.preprocess_input,
-        'MobileNetV3' : MobileNet_V3_Large_Weights.IMAGENET1K_V2.transforms(),
-        #'EfficientNet' : efficientnet.preprocess_input,
-        'EfficientNetV2' : EfficientNet_V2_M_Weights.IMAGENET1K_V1.transforms(),
-        'RegNet' : RegNet_Y_8GF_Weights.IMAGENET1K_V2.transforms()
-    }
-    return preprocessing_options[self.preprocessing]
+        return f"{self.__class__.__name__}(self.channels={self.channels})"
 
 
 class CityscapesTestSplit(Cityscapes):
@@ -87,10 +69,19 @@ class CityscapesTestSplit(Cityscapes):
             tuple: (image, filename): The input image to be inserted to the model for prediction and the 
             filename of that image.
         """
-        image_filename = self.images[index]
-        image = Image.open(image_filename).convert("RGB")
+        image_path = self.images[index]
+        image_filename = image_path.split('/')[-1]
+        
+        image = Image.open(image_path).convert("RGB")
         # need custon collate_fn to return filename
-        return image
+        
+        if self.transform is not None:
+            image = self.transform(image)
+        
+        return {
+            'image': image,
+            'filename': image_filename
+        }
 
 
 class CityscapesDataModule(pl.LightningDataModule):
@@ -124,6 +115,7 @@ class CityscapesDataModule(pl.LightningDataModule):
                                        target_type=self.target_type,
                                        transform=self.transform,
                                        target_transform=self.target_transform)
+            
             self.val_ds = Cityscapes(root=self.datapath, 
                                      split='val', 
                                      mode=self.mode,
@@ -153,7 +145,25 @@ class CityscapesDataModule(pl.LightningDataModule):
         return DataLoader(self.test_ds, self.batch_size, shuffle=False, num_workers=4)
         
     def predict_dataloader(self):
-        return DataLoader(self.predict_ds, batch_size = 1, shuffle=False, num_workers=4)
+        return DataLoader(self.predict_ds, batch_size=self.batch_size, shuffle=False, num_workers=4)
+
+
+def get_preprocessing(self, backbone, weight_version):
+    weights_str = f'{backbone}_Weights.{weight_version}' 
+    # Layer for normalizing input image
+    #default_normalization_layer = tf.keras.layers.Rescaling(scale=1./127.5, offset=-1)
+    preprocessing_options = {
+        'default': ToTensor(),
+        #'ResNet': resnet.preprocess_input,
+        #'ResNetV2' : resnet_v2.preprocess_input,
+        #'MobileNet' : mobilenet.preprocess_input,
+        #'MobileNetV2' : mobilenet_v2.preprocess_input,
+        'MobileNetV3' : MobileNet_V3_Large_Weights.IMAGENET1K_V2.transforms(),
+        #'EfficientNet' : efficientnet.preprocess_input,
+        'EfficientNetV2' : EfficientNet_V2_M_Weights.IMAGENET1K_V1.transforms(),
+        'RegNet' : RegNet_Y_8GF_Weights.IMAGENET1K_V2.transforms()
+    }
+    return preprocessing_options[self.preprocessing]
 
 
 # dictionary that contains the mapping of the class numbers to rgb color values
