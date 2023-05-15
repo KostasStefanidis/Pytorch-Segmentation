@@ -22,20 +22,19 @@ USER ${USER_ID}
 
 # install usefull python packages
 RUN pip install --upgrade pip \
-&& pip install ipython \
-&& pip install ipykernel \
-&& pip install scipy \
-&& pip install pandas \
-&& pip install matplotlib \
-&& pip install -U scikit-learn \
-&& pip install tensorboard \
-&& pip install PyYAML
+&& pip install ipython==8.10.0 \
+&& pip install ipykernel==6.22.0 \
+&& pip install pandas==2.0.0 \
+&& pip install matplotlib==3.7.1 \
+&& pip install -U scikit-learn==1.2.2 \
+#&& pip install tensorboard \
+&& pip install PyYAML==6.0
 
-RUN pip install torcheval \
-&& pip install torchsummary \
-&& pip install torchmetrics \
-&& pip install lightning \
-&& pip install -U tensorboard-plugin-profile
+RUN pip install torcheval==0.0.6 \
+&& pip install torchsummary==1.5.1 \
+&& pip install torchmetrics==0.11.4 \
+&& pip install lightning==2.0.2 \
+&& pip install -U tensorboard-plugin-profile==2.11.2
   
 
 RUN git config --global user.name ${USERNAME} \
