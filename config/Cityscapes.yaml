@@ -1,5 +1,5 @@
 model_config:
-  name: Tets1
+  name: Full1
   architecture: DeepLabV3 # Unet
   backbone: mobilenet_v3_large
   unfreeze_at: block6a_expand_activation # block4a_expand_activation
@@ -21,7 +21,7 @@ dataset_config:
 
 train_config:
   loss: CrossEntropyLoss
-  epochs: 5
+  epochs: 10
   optimizer:
     name: Adam
     weight_decay: 0.00005
@@ -39,7 +39,7 @@ train_config:
   distribute:
     strategy: ddp # NOT IMPEMENTED
     devices: 1
-  precision: 32
+  precision: high
 
 
 eval_config:
