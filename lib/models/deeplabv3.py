@@ -16,7 +16,10 @@ from torchvision.models.regnet import regnet_y_8gf, regnet_y_16gf, regnet_y_32gf
 from torchvision.models import RegNet_Y_16GF_Weights, RegNet_Y_32GF_Weights
 from torchvision.models import RegNet_Y_8GF_Weights, EfficientNet_V2_M_Weights
 from torchvision.models import MobileNet_V3_Large_Weights, ResNet50_Weights, ResNet101_Weights
+
 from lib.models.base_module import SegmentationModule
+
+
 # MobileNet_V3_Large_Weights.IMAGENET1K_V1            # 74.042 | 91.34  |  5.5M  | 0.22GF
 # MobileNet_V3_Large_Weights.IMAGENET1K_V2            # 75.274 | 92.566 |  5.5M  | 0.22GF
 # ResNet50_Weights.IMAGENET1K_V2                      # 80.858 | 95.434 | 25.6M  | 4.09GF

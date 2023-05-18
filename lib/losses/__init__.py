@@ -1,1 +1,1 @@
-from .SegmentationLosses import *
+from . import *

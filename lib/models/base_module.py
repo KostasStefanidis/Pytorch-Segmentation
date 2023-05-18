@@ -7,7 +7,7 @@ from torch.optim import Adam, SGD, LBFGS, Adadelta, Adamax, Adagrad, ASGD
 from torch.optim.lr_scheduler import CyclicLR, PolynomialLR, CosineAnnealingWarmRestarts
 from torch.optim.lr_scheduler import ReduceLROnPlateau, ConstantLR, StepLR, CosineAnnealingLR
 #from lib.losses import IoULoss, DiceLoss, TverskyLoss, FocalTverskyLoss, HybridLoss, FocalHybridLoss
-from lib.datasets import cityscapes_color_map
+from lib.datasets.cityscapes import cityscapes_color_map
 from torchvision.utils import draw_segmentation_masks
 from torchmetrics import JaccardIndex
 import os
