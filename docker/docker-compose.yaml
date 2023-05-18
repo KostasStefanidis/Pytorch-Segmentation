@@ -19,7 +19,7 @@ services:
     working_dir: /mnt/
     volumes:
       - /home/kstef/Pytorch-Segmentation:/mnt/Pytorch-Segmentation
-      - /home/kstef/dataset:/mnt/dataset
+      - /home/kstef/dataset:/mnt/dataset:ro
       - /home/kstef/logs/Pytorch-Segmentation:/mnt/logs
     deploy:
       resources:
