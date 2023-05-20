@@ -3,7 +3,7 @@ from torch import Tensor
 import lightning.pytorch as pl
 from torchvision.datasets import Cityscapes
 from torch.utils.data import DataLoader
-from torchvision.transforms import Compose, ToTensor, PILToTensor, Normalize, Lambda
+from torchvision import transforms
 from torchvision.transforms import Resize, RandomCrop, RandomHorizontalFlip
 from torchvision.transforms import AugMix, RandAugment, RandomAutocontrast, AutoAugment
 from torchvision.transforms import RandomHorizontalFlip, RandomResizedCrop, RandomAdjustSharpness
@@ -13,19 +13,28 @@ from torchvision.models import RegNet_Y_16GF_Weights, RegNet_Y_32GF_Weights
 from torchvision.models import RegNet_Y_8GF_Weights, EfficientNet_V2_M_Weights
 from torchvision.models import EfficientNet_V2_M_Weights, EfficientNet_V2_S_Weights
 from torchvision.models import MobileNet_V3_Large_Weights, ResNet50_Weights, ResNet101_Weights
+from torchvision import datapoints
+import torchvision.transforms.v2 as transformsv2
 
-IGNORE_IDS = [-1,0,1,2,3,4,5,6,9,10,14,15,16,18,29,30]
-EVAL_IDS =   [7,8,11,12,13,17,19,20,21,22,23,24,25,26,27,28,31,32,33]
-TRAIN_IDS =  [0,1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18]
+_IGNORE_IDS = [-1,0,1,2,3,4,5,6,9,10,14,15,16,18,29,30]
+_EVAL_IDS =   [7,8,11,12,13,17,19,20,21,22,23,24,25,26,27,28,31,32,33]
+_TRAIN_IDS =  [0,1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18]
+
 
 class EvalToTrainIds():
-    def __init__(self):
-        pass
-    
+    def __init__(self, 
+                 ignore_ids = _IGNORE_IDS, 
+                 eval_ids = _EVAL_IDS, 
+                 train_ids = _TRAIN_IDS
+                 ):
+        self.ignore_ids = ignore_ids
+        self.eval_ids = eval_ids
+        self.train_ids = train_ids
+            
     def __call__(self, target):    
-        for id in IGNORE_IDS:
+        for id in self.ignore_ids:
             target = torch.where(target==id, 34, target)
-        for train_id, eval_id in zip(TRAIN_IDS, EVAL_IDS):
+        for train_id, eval_id in zip(self.train_ids, self.eval_ids):
             target = torch.where(target==eval_id, train_id, target)
         target = torch.where(target==34, 19, target)
         return target
@@ -38,13 +47,13 @@ class OneHot():
     def __init__(self, channels) -> None:
         self.channels = channels
     
-    def __call__(self, input) -> Any:
+    def __call__(self, input: Tensor) -> Any:
         one_hot_output = torch.zeros(self.channels, *input.shape[1:], dtype=torch.float32)
-        one_hot_output.scatter_(0, torch.tensor(input, dtype=torch.int64), 1)
+        one_hot_output.scatter_(0, input.to(dtype=torch.int64), 1)
         return one_hot_output
     
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(self.channels={self.channels})"
+        return f"{self.__class__.__name__}(channels={self.channels})"
 
 
 class CityscapesTestSplit(Cityscapes):
@@ -52,6 +61,7 @@ class CityscapesTestSplit(Cityscapes):
                  root: str, 
                  transform: Callable[..., Any] | None = None,
                  ) -> None:
+        
         super().__init__(root=root,
                          transform=transform,
                          split='test', 
@@ -86,25 +96,46 @@ class CityscapesTestSplit(Cityscapes):
 class CityscapesDataset(Cityscapes):
     '''
     Helpler class to wrap Cityscapes with adittional funcionality.
+    To be used with transforms v2. Images need to be wrapped in datapoint.Image object
+    and target in datapoint.Mask
     '''
     def __init__(self, 
                  root: str, 
                  split: str = "train", 
                  mode: str = "fine", 
-                 target_type: List[str] | str = "instance", 
-                 num_classes: int = None,
+                 target_type: List[str] | str = "semantic", 
                  transform: Callable[..., Any] | None = None, 
                  target_transform: Callable[..., Any] | None = None, 
-                 transforms: Callable[..., Any] | None = None
+                 augmentations: Callable[..., Any] | None = None
                  ) -> None:
-        super().__init__(root, split, mode, target_type, transform, target_transform, transforms)
-        self.num_classes = num_classes
-        self.one_hot_transform = OneHot(num_classes)
+        
+        super().__init__(root, split, mode, target_type, transform, target_transform)
+        self.augmentations = augmentations
 
-    def __getitem__(self, index: int) -> Tuple[Any, Any]:
-        image, target = super().__getitem__(index)
-        return image, self.one_hot_transform(target)
-    
+    def __getitem__(self, index: int) -> Tuple[datapoints.Image, datapoints.Mask]:
+        
+        image = Image.open(self.images[index]).convert("RGB")
+
+        targets: Any = []
+        for i, t in enumerate(self.target_type):
+            if t == "polygon":
+                target = self._load_json(self.targets[index][i])
+            else:
+                target = Image.open(self.targets[index][i])
+
+            targets.append(target)
+
+        target = tuple(targets) if len(targets) > 1 else targets[0]
+        
+        # Wrap image and target in datapoints Image and Mask objects 
+        image, target = datapoints.Image(image), datapoints.Mask(target)
+        
+        if self.augmentations is not None:
+            image, target = self.augmentations(image, target)
+        
+        image, target = self.transform(image), self.target_transform(target)
+        return image, target
+
 
 class CityscapesDataModule(pl.LightningDataModule):
     def __init__(self, dataset_config) -> None:
@@ -114,16 +145,16 @@ class CityscapesDataModule(pl.LightningDataModule):
         self.target_type = dataset_config.get('type', 'semantic')
         self.num_classes = dataset_config.get('num_classes', 20)
         self.batch_size = dataset_config.get('batch_size', 3)
-        self.target_transform = Compose(
+        self.target_transform = transforms.Compose(
             [
-                PILToTensor(),
+                transforms.PILToTensor(),
                 EvalToTrainIds(),
                 OneHot(self.num_classes)
             ]
         )
-        self.transform = Compose(
+        self.transform = transforms.Compose(
             [
-                ToTensor(),
+                transforms.ToTensor(),
                 #Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
             ]
         )
@@ -167,7 +198,7 @@ class CityscapesDataModule(pl.LightningDataModule):
         return DataLoader(self.test_ds, self.batch_size, shuffle=False, num_workers=4)
         
     def predict_dataloader(self):
-        return DataLoader(self.predict_ds, batch_size=self.batch_size, shuffle=False, num_workers=4)
+        return DataLoader(self.predict_ds, self.batch_size, shuffle=False, num_workers=4)
 
 
 def get_preprocessing(self, backbone, weight_version):
@@ -175,7 +206,7 @@ def get_preprocessing(self, backbone, weight_version):
     # Layer for normalizing input image
     #default_normalization_layer = tf.keras.layers.Rescaling(scale=1./127.5, offset=-1)
     preprocessing_options = {
-        'default': ToTensor(),
+        'default': transforms.ToTensor(), # Convert to Tensor and
         #'ResNet': resnet.preprocess_input,
         #'ResNetV2' : resnet_v2.preprocess_input,
         #'MobileNet' : mobilenet.preprocess_input,
