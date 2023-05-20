@@ -1,18 +1,30 @@
+import lightning.pytorch as pl
 import os
 import torch
-import torch.nn as nn
-from torch.utils import tensorboard
-from torchvision.models.segmentation.deeplabv3 import deeplabv3_mobilenet_v3_large
-from torch.optim import Adam, SGD, LBFGS, Adadelta, Adamax, Adagrad
+import torchvision
+import numpy as np
+from PIL import Image
+from torch import nn
+import torch.nn.functional as F
+from torchvision.models.segmentation.deeplabv3 import deeplabv3_mobilenet_v3_large, DeepLabV3_MobileNet_V3_Large_Weights
+from torchvision.models.segmentation.deeplabv3 import deeplabv3_resnet50, DeepLabV3_ResNet50_Weights
+from torchvision.models.segmentation.deeplabv3 import deeplabv3_resnet101, DeepLabV3_ResNet101_Weights
+from torch.optim import Adam, SGD, LBFGS, Adadelta, Adamax, Adagrad, ASGD
 from torch.optim.lr_scheduler import CyclicLR, PolynomialLR, CosineAnnealingWarmRestarts
 from torch.optim.lr_scheduler import ReduceLROnPlateau, ConstantLR, StepLR, CosineAnnealingLR
+from lightning.pytorch.callbacks import ModelCheckpoint, StochasticWeightAveraging, EarlyStopping
+from lightning.pytorch.callbacks import ModelSummary, TQDMProgressBar
+from lightning.pytorch.loggers import TensorBoardLogger
+import sys
 #from utils.losses import IoULoss, DiceLoss, TverskyLoss, FocalTverskyLoss, HybridLoss, FocalHybridLoss
-from utils.datasets import CityscapesDataset #, MapillaryDataset
+from lib.datasets.cityscapes import CityscapesDataModule
+from lib.models.base_module import SegmentationModule
 from torch.utils.data import DataLoader
+from torchsummary import summary
 #from utils.eval import MeanIoU
 #from utils.models import  Unet, Residual_Unet, Attention_Unet, Unet_plus, DeepLabV3plus
-from argparse import ArgumentParser
 import yaml
+from argparse import ArgumentParser
 
 parser = ArgumentParser('')
 parser.add_argument('--config', type=str, nargs='?')
@@ -54,75 +66,73 @@ if args.config is None:
 else:
     # Read YAML file
     print('Reading configuration from config yaml')
-    
-    with open(args.config, 'r') as config_file:
+
+    with open('config/Cityscapes.yaml', 'r') as config_file:
         config = yaml.safe_load(config_file)
 
-    LOGS_DIR = config['logs_dir']
+    # TODO: Add default values if a variable is not defined in the config file
 
-    model_config = config['model']
-    dataset_config = config['dataset']
-    train_config = config['train_config']
+    LOGS_DIR = config.get('logs_dir')
+    model_config = config.get('model_config')
+    dataset_config = config.get('dataset_config')
+    train_config = config.get('train_config')
 
     # Dataset Configuration
-    DATASET = dataset_config['name']
-    DATA_PATH = dataset_config['path']
-    VERSION = dataset_config['version']
-    NUM_TRAIN_IMAGES = dataset_config['num_train_images']
-    NUM_EVAL_IMAGES = dataset_config['num_eval_images']
-    CACHE = dataset_config['cache']
-    CACHE_FILE = dataset_config['cache_file']
-    SEED = dataset_config['seed']
+    DATASET = dataset_config.get('name')
+    NUM_TRAIN_BATCHES = dataset_config.get('num_train_batches', 1.0)
+    NUM_EVAL_BATCHES = dataset_config.get('num_eval_batches', 1.0)
+    BATCH_SIZE = dataset_config.get('batch_size') #
+    SEED = dataset_config.get('seed')
 
     # Model Configuration
-    MODEL_TYPE = model_config['architecture']
-    MODEL_NAME = model_config['name']
-    BACKBONE = model_config['backbone']
-    UNFREEZE_AT = model_config['unfreeze_at']
-    INPUT_SHAPE = model_config['input_shape']
-    OUTPUT_STRIDE = model_config['output_stride']
-    FILTERS = model_config['filters']
-    ACTIVATION = model_config['activation']
-    DROPOUT_RATE = model_config['dropout_rate']
+    MODEL_TYPE = model_config.get('architecture')
+    MODEL_NAME = model_config.get('name')
+    BACKBONE = model_config.get('backbone')
+    UNFREEZE_AT = model_config.get('unfreeze_at')
+    INPUT_SHAPE = model_config.get('input_shape')
+    OUTPUT_STRIDE = model_config.get('output_stride')
+    FILTERS = model_config.get('filters')
+    ACTIVATION = model_config.get('activation')
+    DROPOUT_RATE = model_config.get('dropout_rate')
 
     # Training Configuration
-    PRETRAINED_WEIGHTS = model_config['pretrained_weights']
-    
-    BATCH_SIZE = train_config['batch_size']
-    EPOCHS = train_config['epochs']
-    FINAL_EPOCHS = train_config['final_epochs']
-    AUGMENT = train_config['augment']
-    MIXED_PRECISION = train_config['mixed_precision']
-    LOSS = train_config['loss']
+    # PRETRAINED_WEIGHTS = model_config['pretrained_weights']
 
-    optimizer_config = train_config['optimizer']
-    OPTIMIZER_NAME = optimizer_config['name']
-    WEIGHT_DECAY = optimizer_config['weight_decay']
-    MOMENTUM = optimizer_config['momentum']
-    START_LR = optimizer_config['schedule']['start_lr']
-    END_LR = optimizer_config['schedule']['end_lr']
-    LR_DECAY_EPOCHS = optimizer_config['schedule']['decay_epochs']
-    POWER = optimizer_config['schedule']['power']
 
-    DISTRIBUTE_STRATEGY = train_config['distribute']['strategy']
-    DEVICES = train_config['distribute']['devices']
+    EPOCHS = train_config.get('epochs') #
+    AUGMENTATION = train_config.get('augment') #
+    PRECISION = str(train_config.get('precision')) #
 
-if DATASET == 'Cityscapes':
-    NUM_CLASSES = 20
-    IGNORE_CLASS = 19
-    INPUT_SHAPE = (1024, 2048, 3)
-elif DATASET == 'Mapillary':
-    INPUT_SHAPE = (1024, 1856, 3)
-    if VERSION == 'v1.2':
-        NUM_CLASSES = 64
-        IGNORE_CLASS = 63
-    elif VERSION == 'v2.0':
-        NUM_CLASSES = 118
-        IGNORE_CLASS = 117
-    else:
-        raise ValueError('Version of the Mapillary Vistas dataset should be either v1.2 or v2.0!')
-else:
-    raise ValueError(F'{DATASET} dataset is invalid. Available Datasets are: Cityscapes, Mapillary!')
+    # Stohastic weight averaging parameters
+    SWA = train_config.get('swa')
+    if SWA is not None:
+        SWA_LRS = SWA.get('lr', 1e-3)
+        SWA_EPOCH_START = SWA.get('epoch_start', 0.7)
+
+    DISTRIBUTE_STRATEGY = train_config.get('distribute').get('strategy')
+    DEVICES = train_config.get('distribute').get('devices')
+
+    # save the config in the hparams.yaml file 
+    # with open(f'{LOGS_DIR}/my.yaml', 'w') as config_file:
+    #     config = yaml.safe_dump(config, config_file)
+
+
+# if DATASET == 'Cityscapes':
+#     NUM_CLASSES = 20
+#     IGNORE_CLASS = 19
+#     INPUT_SHAPE = (1024, 2048, 3)
+# elif DATASET == 'Mapillary':
+#     INPUT_SHAPE = (1024, 1856, 3)
+#     if VERSION == 'v1.2':
+#         NUM_CLASSES = 64
+#         IGNORE_CLASS = 63
+#     elif VERSION == 'v2.0':
+#         NUM_CLASSES = 118
+#         IGNORE_CLASS = 117
+#     else:
+#         raise ValueError('Version of the Mapillary Vistas dataset should be either v1.2 or v2.0!')
+# else:
+#     raise ValueError(F'{DATASET} dataset is invalid. Available Datasets are: Cityscapes, Mapillary!')
 
 # Define preprocessing according to the Backbone
 if BACKBONE == 'None':
@@ -147,74 +157,60 @@ elif 'RegNet' in BACKBONE:
 else:
     raise ValueError(f'Enter a valid Backbone name, {BACKBONE} is invalid.')
 
-# ---------------------- set presicion policy ------------------------------
+
+torch.set_float32_matmul_precision(PRECISION)
 
 
-# --------------------------- Create Dataset stream --------------------------------
-if DATASET == 'Cityscapes':
-    train_ds = CityscapesDataset(root=DATA_PATH, 
-                                 split='train', 
-                                 mode='fine', 
-                                 target_type='semantic')
-    train_ds_loader = DataLoader(dataset=train_ds, batch_size=BATCH_SIZE, shuffle=True)
+model_checkpoint_path = f'saved_models/{MODEL_TYPE}/{MODEL_NAME}'
+model_checkpoint_callback = ModelCheckpoint(dirpath=LOGS_DIR,
+                                            filename=model_checkpoint_path,
+                                            save_weights_only=False,
+                                            monitor='val_loss',
+                                            mode='min',
+                                            verbose=True)
 
-    val_ds = CityscapesDataset(root=DATA_PATH, 
-                                 split='val', 
-                                 mode='fine', 
-                                 target_type='semantic')
-    val_ds_loader = DataLoader(dataset=val_ds, batch_size=BATCH_SIZE, shuffle=False)
+early_stopping_callback = EarlyStopping(patience=6,
+                                        monitor='val_loss',
+                                        # mode='max',
+                                        min_delta=1e-6,
+                                        verbose=True,
+                                        strict=True,
+                                        check_finite=True,
+                                        log_rank_zero_only=True)
 
-# elif DATASET == 'Mapillary':
-#     train_ds = MapillaryDataset(height=1024, width=1856,
-#                                 split='training',
-#                                 preprocessing=PREPROCESSING,
-#                                 version=VERSION,
-#                                 shuffle=True,
-#                                 )
-#     train_ds = train_ds.create(DATA_PATH, BATCH_SIZE, NUM_TRAIN_IMAGES, augment=False, seed=SEED)
+callbacks = [model_checkpoint_callback, ModelSummary(max_depth=3)]
 
-#     val_ds = MapillaryDataset(height=1024, width=1856,
-#                               split='validation',
-#                               preprocessing=PREPROCESSING,
-#                               version=VERSION,
-#                               shuffle=False)
-#     val_ds = val_ds.create(DATA_PATH, BATCH_SIZE, NUM_EVAL_IMAGES, seed=SEED)
-    
-# Define chechpoint paths and tensorboard object
-steps_per_epoch = len(train_ds_loader)
+if SWA is not None:
+    swa_callback = StochasticWeightAveraging(swa_lrs=SWA_LRS,
+                                         swa_epoch_start=SWA_EPOCH_START)
+    callbacks.append(swa_callback)
 
-loss_func = eval(LOSS)
-loss = loss_func()
+logger = TensorBoardLogger(save_dir=f'{LOGS_DIR}/Tensorboard_logs',
+                           name=f'{MODEL_TYPE}/{MODEL_NAME}',
+                           log_graph=True)
 
 #--------------------------- Define Model -------------------------------
-model = deeplabv3_mobilenet_v3_large()
+model = SegmentationModule(
+    model = deeplabv3_mobilenet_v3_large(num_classes=20),
+    train_config=train_config
+)
 
-optimizer_dict = {
-    'Adam' : Adam(params=model.parameters,
-                  lr=START_LR,
-                  weight_decay=WEIGHT_DECAY),
-    'Adadelta' : Adadelta(params=model.parameters,
-                          lr=START_LR,
-                          weight_decay=WEIGHT_DECAY),
-    'SGD' : SGD(params=model.parameters,
-                lr=START_LR,
-                momentum=MOMENTUM,
-                weight_decay=WEIGHT_DECAY)
-}
+data_module = CityscapesDataModule(dataset_config)
 
-optimizer = optimizer_dict[OPTIMIZER_NAME]
+trainer = pl.Trainer(
+    accelerator='gpu',
+    #strategy=DISTRIBUTE_STRATEGY
+    devices=DEVICES,
+    limit_train_batches=NUM_TRAIN_BATCHES,
+    limit_val_batches=NUM_EVAL_BATCHES,
+    max_epochs=EPOCHS,
+    #precision=PRECISION,
+    deterministic=False,
+    callbacks=callbacks,
+    default_root_dir=LOGS_DIR,
+    logger=logger,
+    #profiler='simple',
+    #sync_batchnorm=True,
+)
 
-lr_schedule = PolynomialLR(
-    optimizer=optimizer,
-    initial_learning_rate=START_LR,
-    total_iters=LR_DECAY_EPOCHS*steps_per_epoch,
-    power=POWER,
-    verbose=True
-    )
-
-# mean_iou = MeanIoU(NUM_CLASSES, name='MeanIoU', ignore_class=None)
-# mean_iou_ignore = MeanIoU(NUM_CLASSES, name='MeanIoU_ignore', ignore_class=IGNORE_CLASS)
-# metrics = [mean_iou_ignore]
-
-# model = torch.compile(model)
-
+trainer.fit(model, datamodule=data_module)
