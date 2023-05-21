@@ -5,7 +5,6 @@ model_config:
   num_classes: 20
   unfreeze_at: block6a_expand_activation # block4a_expand_activation
   output_stride: 16
-  filters: [16,32,64,128,256]
   activation: leaky_relu # swish, leaky_relu
   dropout_rate: 0
   pretrained_weights: #/root/Semantic-Segmentation-Cityscapes/pretrained_models/Mapillary/trunk

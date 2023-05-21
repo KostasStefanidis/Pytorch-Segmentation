@@ -50,14 +50,15 @@ if args.config is None:
 else:
     # Read YAML file
     with open('config/Cityscapes.yaml', 'r') as config_file:
-        config = yaml.safe_load(config_file)
+        config: dict = yaml.safe_load(config_file)
 
     # TODO: Add default values if a variable is not defined in the config file
 
     LOGS_DIR = config.get('logs_dir')
-    model_config = config.get('model_config')
-    dataset_config = config.get('dataset_config')
-    train_config = config.get('train_config')
+    model_config: dict = config.get('model_config')
+    dataset_config: dict = config.get('dataset_config')
+    train_config: dict = config.get('train_config')
+    augmentation_config: dict = train_config.get('augmentations')
 
     # Dataset Configuration
     DATASET = dataset_config.get('name')
@@ -68,21 +69,16 @@ else:
     MODEL_TYPE = model_config.get('architecture')
     MODEL_NAME = model_config.get('name')
 
-    # Training Configuration
-    # PRETRAINED_WEIGHTS = model_config['pretrained_weights']
-    augmentation_config: dict = train_config.get('augmentations')
-
     EPOCHS = train_config.get('epochs') #
     PRECISION = str(train_config.get('precision')) #
+    DISTRIBUTE_STRATEGY = train_config.get('distribute').get('strategy')
+    DEVICES = train_config.get('distribute').get('devices')
 
     # Stohastic weight averaging parameters
     SWA = train_config.get('swa')
     if SWA is not None:
         SWA_LRS = SWA.get('lr', 1e-3)
         SWA_EPOCH_START = SWA.get('epoch_start', 0.7)
-
-    DISTRIBUTE_STRATEGY = train_config.get('distribute').get('strategy')
-    DEVICES = train_config.get('distribute').get('devices')
 
 # --------------------------- Callbacks ----------------------------
 model_checkpoint_path = f'saved_models/{MODEL_TYPE}/{MODEL_NAME}'
