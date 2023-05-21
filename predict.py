@@ -1,4 +1,5 @@
 import torch
+import lightning.pytorch as pl
 from lib.datasets.cityscapes import CityscapesDataModule
 from lib.models.base_module import SegmentationModule
 from argparse import ArgumentParser
@@ -29,29 +30,9 @@ with open(args.config, 'r') as config_file:
     INFERENCE_OUTPUT_STRIDE = inference_config['output_stride']
     INFERENCE_PRECISION = inference_config['precision']
 
-if BACKBONE == 'None':
-    PREPROCESSING = 'default'
-    BACKBONE = None
-elif 'ResNet' in BACKBONE:
-    PREPROCESSING = 'ResNet'
-    if 'V2' in BACKBONE:
-        PREPROCESSING = 'ResNetV2'
-elif 'EfficientNet' in BACKBONE:
-    PREPROCESSING = 'EfficientNet'
-elif 'EfficientNetV2' in BACKBONE:
-    PREPROCESSING = 'EfficientNetV2'
-elif 'MobileNet' == BACKBONE:
-    PREPROCESSING = 'MobileNet'
-elif 'MobileNetV2' == BACKBONE:
-    PREPROCESSING = 'MobileNetV2'
-elif 'MobileNetV3' in BACKBONE:
-    PREPROCESSING = 'MobileNetV3'
-elif 'RegNet' in BACKBONE:
-    PREPROCESSING = 'RegNet'
-else:
-    raise ValueError(f'Enter a valid Backbone name, {BACKBONE} is invalid.')
+torch.set_float32_matmul_precision(INFERENCE_PRECISION)
 
-MODELS_DIR = 'saved_models'
+checkpoint_dir = f'{LOGS_DIR}/saved_models/{MODEL_TYPE}/{MODEL_NAME}.ckpt'
 grayscale_path = f'{LOGS_DIR}/predictions/{MODEL_TYPE}/{MODEL_NAME}/test/grayscale'
 rgb_path = f'{LOGS_DIR}/predictions/{MODEL_TYPE}/{MODEL_NAME}/test/rgb'
 
@@ -60,4 +41,11 @@ os.makedirs(rgb_path, exist_ok=True)
 
 data_module = CityscapesDataModule(dataset_config=dataset_config)
 
-model = SegmentationModule()
+model = SegmentationModule.load_from_checkpoint(checkpoint_dir)
+
+trainer = pl.Trainer(
+    accelerator='gpu',
+    devices='0',
+)
+
+trainer.predict(model, datamodule=data_module, return_predictions=False)

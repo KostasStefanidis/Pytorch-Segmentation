@@ -1,10 +1,10 @@
 model_config:
-  name: Full1
-  architecture: DeepLabV3 # Unet
+  name: deeplabv3-mobilenet_v3_large-1
+  architecture: deeplabv3 # Unet
   backbone: mobilenet_v3_large
+  num_classes: 20
   unfreeze_at: block6a_expand_activation # block4a_expand_activation
-  input_shape: [1024, 2048, 3] # do not change
-  output_stride: 32
+  output_stride: 16
   filters: [16,32,64,128,256]
   activation: leaky_relu # swish, leaky_relu
   dropout_rate: 0
@@ -15,9 +15,10 @@ dataset_config:
   path: /mnt/dataset/Cityscapes/
   version: fine
   batch_size: 6
-  num_train_batches: 50 # 1.0 means 100% 
-  num_eval_batches: 10
+  num_train_batches: 1.0 # 1.0 means 100% 
+  num_eval_batches: 1.0
   seed: 80
+  num_workers: 6
 
 train_config:
   loss: CrossEntropyLoss
@@ -31,16 +32,20 @@ train_config:
     name: Polynomial
     decay_epochs: 10
     power: 2
-  # swa: 
-  #   lr: 0.001
-  #   epoch_start: 0.5
-  augmentation: 
-    # a list of augmentations to perform
   distribute:
     strategy: ddp # NOT IMPEMENTED
     devices: 1
   precision: high
-
+  augmentations: 
+    color_jitter: 
+      contrast: 0.3
+      brightness: 0.3
+      saturation: 0.2
+    random_rotation: 10
+    horizontal_flip: 0.5
+    gaussian_blur:
+      kernel_size: 7
+      sigma: [0.1, 3.0]
 
 eval_config:
   eval_scales: [0.5, 1, 2]
@@ -48,7 +53,7 @@ eval_config:
   output_stride: 16 # NOT IMPEMENTED
 
 inference_config:
-  precision: 32 # NOT IMPEMENTED
+  precision: medium
   output_stride: 16 # NOT IMPEMENTED
 
 logs_dir: /mnt/logs
