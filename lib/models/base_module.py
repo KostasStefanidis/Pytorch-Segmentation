@@ -61,7 +61,7 @@ class SegmentationModule(pl.LightningModule):
         
         self.val_mean_iou = JaccardIndex(task='multiclass', 
                                          num_classes=self.num_classes,
-                                         average='micro',
+                                         average='macro',
                                          ignore_index=19)
         #self.example_input_array = torch.Tensor(4, 3, 1024, 2048)
 
