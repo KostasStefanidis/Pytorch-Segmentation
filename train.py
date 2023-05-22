@@ -67,12 +67,12 @@ def main():
     model_checkpoint_callback = ModelCheckpoint(dirpath=LOGS_DIR,
                                                 filename=model_checkpoint_path,
                                                 save_weights_only=False,
-                                                monitor='val_mean_iou',
+                                                monitor='val_Mean_IoU',
                                                 mode='max',
                                                 verbose=True)
 
     early_stopping_callback = EarlyStopping(patience=6,
-                                            monitor='val_mean_iou',
+                                            monitor='val_Mean_IoU',
                                             mode='max',
                                             min_delta=1e-6,
                                             verbose=True,
@@ -80,7 +80,7 @@ def main():
                                             check_finite=True,
                                             log_rank_zero_only=True)
 
-    callbacks = [model_checkpoint_callback, ModelSummary(max_depth=3)]
+    callbacks = [model_checkpoint_callback, ModelSummary(max_depth=2)]
 
     if USE_EARLY_STOPPING:
         callbacks.append(early_stopping_callback)

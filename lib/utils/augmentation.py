@@ -1,5 +1,8 @@
+import torchvision
 from torchvision.transforms.v2 import ColorJitter, RandomHorizontalFlip
 from torchvision.transforms.v2 import GaussianBlur, Compose, RandomRotation
+
+torchvision.disable_beta_transforms_warning()
 
 _ALL_SUPPORTED_AUGMENTATIONS = ['color_jitter', 'horizontal_flip', 'random_rotation', 'gaussian_blur']
 

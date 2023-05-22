@@ -1,4 +1,5 @@
 import torch
+import torchvision
 from torch import Tensor
 import lightning.pytorch as pl
 from torchvision.datasets import Cityscapes
@@ -174,7 +175,10 @@ class CityscapesDataModule(pl.LightningDataModule):
             
         self.transform = transform if transform is not None else DEFAULT_TRANSFORM
         
-        self.augmentations = get_augmentations(augmentation_config)
+        if augmentation_config is not None:
+            self.augmentations = get_augmentations(augmentation_config)
+        else:
+            self.augmentations = None
         
         
     def setup(self, stage: str) -> None:
