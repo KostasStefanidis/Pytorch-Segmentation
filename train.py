@@ -30,6 +30,8 @@ def main():
         print('Seeding with', args.seed)
         random.seed(args.seed)
         torch.manual_seed(args.seed)
+        torch.cuda.manual_seed(args.seed)
+        torch.cuda.manual_seed_all(args.seed)
     
     with open(args.config, 'r') as config_file:
         config: dict = yaml.safe_load(config_file)
@@ -42,7 +44,7 @@ def main():
     augmentation_config: dict = train_config.get('augmentations')
 
     # Dataset Configuration
-    DATASET = dataset_config.get('name')
+    # DATASET = dataset_config.get('name')
     NUM_TRAIN_BATCHES = dataset_config.get('num_train_batches', 1.0)
     NUM_EVAL_BATCHES = dataset_config.get('num_eval_batches', 1.0)
 
@@ -54,6 +56,8 @@ def main():
     PRECISION = str(train_config.get('precision')) #
     DISTRIBUTE_STRATEGY = train_config.get('distribute').get('strategy')
     DEVICES = train_config.get('distribute').get('devices')
+    sync_batchnorm = train_config.get('distribute').get('sync_batchnorm')
+    
     USE_EARLY_STOPPING = train_config.get('early_stopping', False)
     
     # Stohastic weight averaging parameters
@@ -97,30 +101,30 @@ def main():
 
 
     # --------------------------- Define Model -------------------------------
-    model = SegmentationModule(
-        model_config = model_config,
-        train_config=train_config,
-        logs_dir=LOGS_DIR
-    )
-
-    datamodule = CityscapesDataModule(dataset_config, augmentation_config)
-
     torch.set_float32_matmul_precision(PRECISION)
 
     trainer = pl.Trainer(
-        accelerator='gpu',
-        devices=DEVICES,
         limit_train_batches=NUM_TRAIN_BATCHES,
         limit_val_batches=NUM_EVAL_BATCHES,
         max_epochs=EPOCHS,
         callbacks=callbacks,
         default_root_dir=LOGS_DIR,
         logger=logger,
-        #strategy=DISTRIBUTE_STRATEGY
+        accelerator='gpu',
+        devices=DEVICES,
+        strategy=DISTRIBUTE_STRATEGY,
+        sync_batchnorm=sync_batchnorm,
         #profiler='simple',
-        #sync_batchnorm=True,
+    )
+    
+    model = SegmentationModule(
+        model_config = model_config,
+        train_config = train_config,
+        logs_dir = LOGS_DIR
     )
 
+    datamodule = CityscapesDataModule(dataset_config, augmentation_config)
+    
     trainer.fit(model, datamodule=datamodule)
     
 if __name__ == '__main__':

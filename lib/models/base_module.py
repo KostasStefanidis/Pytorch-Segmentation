@@ -69,7 +69,7 @@ class SegmentationModule(pl.LightningModule):
                                          num_classes=self.num_classes,
                                          average='macro',
                                          ignore_index=19)
-        #self.example_input_array = torch.Tensor(4, 3, 1024, 2048)
+
 
     def configure_optimizers(self):
         optimizer = get_optimizer(self.optimizer_config, self.model)
@@ -89,8 +89,8 @@ class SegmentationModule(pl.LightningModule):
         pred = self.model(input)['out']
         loss = self.loss(pred, target)
         self.train_mean_iou(torch.argmax(pred, dim=1), torch.argmax(target, dim=1))
-        self.log("train_loss", loss, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
-        self.log('train_Mean_IoU', self.train_mean_iou, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
+        self.log("train_loss", loss, on_epoch=True, on_step=False, sync_dist=True)
+        self.log('train_Mean_IoU', self.train_mean_iou, on_epoch=True, on_step=False, sync_dist=True)
         return loss
     
     
@@ -99,8 +99,8 @@ class SegmentationModule(pl.LightningModule):
         pred = self.model(input)['out']
         loss = self.loss(pred, target)
         self.val_mean_iou(torch.argmax(pred, dim=1), torch.argmax(target, dim=1))
-        self.log("val_loss", loss, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
-        self.log('val_Mean_IoU', self.val_mean_iou, on_epoch=True, on_step=False, prog_bar=True, sync_dist=True)
+        self.log("val_loss", loss, on_epoch=True, on_step=False, sync_dist=True)
+        self.log('val_Mean_IoU', self.val_mean_iou, on_epoch=True, on_step=False, sync_dist=True)
     
     
     def predict_step(self, predict_batch: dict, batch_idx: int, dataloader_idx: int = 0):

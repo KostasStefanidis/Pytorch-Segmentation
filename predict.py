@@ -20,15 +20,10 @@ def main():
         model_config = config.get('model')
         inference_config = config.get('inference_config')
 
-        DATASET = dataset_config.get('name')
-        DATA_PATH = dataset_config.get('path')
-        VERSION = dataset_config['version']
-
         MODEL_TYPE = model_config.get('architecture')
         MODEL_NAME = model_config.get('name')
-        BACKBONE = model_config.get('backbone')
 
-        INFERENCE_OUTPUT_STRIDE = inference_config.get('output_stride')
+        INFERENCE_OUTPUT_STRIDE = inference_config.get('output_stride', 16)
         INFERENCE_PRECISION = inference_config.get('precision')
 
     torch.set_float32_matmul_precision(INFERENCE_PRECISION)
@@ -46,7 +41,7 @@ def main():
 
     trainer = pl.Trainer(
         accelerator='gpu',
-        devices='0',
+        devices=1,
     )
 
     trainer.predict(model, datamodule=data_module, return_predictions=False)
