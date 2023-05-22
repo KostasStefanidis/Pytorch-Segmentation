@@ -13,11 +13,15 @@ from torchvision.models import EfficientNet_V2_M_Weights, EfficientNet_V2_S_Weig
 from torchvision.models import MobileNet_V3_Large_Weights, ResNet50_Weights, ResNet101_Weights
 from torchvision import datapoints
 import torchvision.transforms.v2 as transformsv2
+from torch.utils.data.distributed import DistributedSampler
+from torch.utils.data import get_worker_info
 from lib.utils.augmentation import get_augmentations
+
 
 _IGNORE_IDS = [-1,0,1,2,3,4,5,6,9,10,14,15,16,18,29,30]
 _EVAL_IDS =   [7,8,11,12,13,17,19,20,21,22,23,24,25,26,27,28,31,32,33]
 _TRAIN_IDS =  [0,1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18]
+
 
 class EvalToTrainIds():
     def __init__(self, 
@@ -211,17 +215,40 @@ class CityscapesDataModule(pl.LightningDataModule):
                                                   transform=self.transform)
     
     def train_dataloader(self):
-        return DataLoader(self.train_ds, self.batch_size, shuffle=True, num_workers=self.num_workers)
+        sampler = DistributedSampler(self.train_ds) if torch.distributed.is_initialized() else None
+        return DataLoader(self.train_ds, 
+                          self.batch_size, 
+                          shuffle=True and sampler is None, 
+                          num_workers=self.num_workers, 
+                          pin_memory=True,
+                          sampler=sampler)
     
     def val_dataloader(self):
-        return DataLoader(self.val_ds, self.batch_size, shuffle=False, num_workers=self.num_workers)
+        sampler = DistributedSampler(self.val_ds) if torch.distributed.is_initialized() else None
+        return DataLoader(self.val_ds, 
+                          self.batch_size, 
+                          shuffle=False, 
+                          num_workers=self.num_workers, 
+                          pin_memory=True,
+                          sampler=sampler)
     
     def test_dataloader(self):
-        return DataLoader(self.test_ds, self.batch_size, shuffle=False, num_workers=self.num_workers)
+        return DataLoader(self.val_ds, 
+                          self.batch_size, 
+                          shuffle=False, 
+                          num_workers=self.num_workers, 
+                          pin_memory=True)
         
     def predict_dataloader(self):
-        return DataLoader(self.predict_ds, self.batch_size, shuffle=False, num_workers=self.num_workers)
+        return DataLoader(self.test_ds, 
+                          self.batch_size, 
+                          shuffle=False, 
+                          num_workers=self.num_workers, 
+                          pin_memory=True)
 
+
+#def _worker_init_function():
+    
 
 def get_preprocessing(self, backbone, weight_version):
 
