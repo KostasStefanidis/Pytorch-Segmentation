@@ -11,6 +11,12 @@ import torchvision.transforms.v2 as transformsv2
 _EVAL_IDS =   [7,8,11,12,13,17,19,20,21,22,23,24,25,26,27,28,31,32,33, 0] # MAP VOID CLASS TO 0 -> TOTAL BLACK 
 _TRAIN_IDS =  [0,1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19]
 
+_ALL_ARCHITECTURES = ['deeplabv3']
+
+_MODEL_NOT_IMPLEMENTED_ERROR = lambda arch: f'''\
+Architecture: {arch} is not implemented. \
+Available architectures are: {_ALL_ARCHITECTURES}
+'''
 
 def get_model(architecture: str, backbone: str, num_classes: int):
     if architecture == 'deeplabv3':
@@ -18,7 +24,7 @@ def get_model(architecture: str, backbone: str, num_classes: int):
         model_func: function = eval(model_function_name)
         model: DeepLabV3 = model_func(num_classes=num_classes)
     else:
-        raise ValueError('')
+        raise ValueError(_MODEL_NOT_IMPLEMENTED_ERROR(architecture))
     return model
 
 class SegmentationModule(pl.LightningModule):
@@ -116,7 +122,7 @@ class SegmentationModule(pl.LightningModule):
             
             # save grayscale predictions
             grayscale_img = transformsv2.functional.to_pil_image(pred)
-            grayscale_img.save(f'{self.grayscale_path}/{filename}')
+            grayscale_img.save(f'{self.grayscale_pred_save_path}/{filename}')
             
             # Draw segmentation mask on top of original image
             boolean_masks = pred == torch.arange(34)[:, None, None]
@@ -126,4 +132,4 @@ class SegmentationModule(pl.LightningModule):
                                                     colors=list(cityscapes_color_map.values()))
             
             overlayed_mask_img = transformsv2.functional.to_pil_image(overlayed_mask)
-            overlayed_mask_img.save(f'{self.rgb_path}/{filename}')
+            overlayed_mask_img.save(f'{self.rgb_pred_save_path}/{filename}')

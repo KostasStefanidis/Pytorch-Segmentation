@@ -1,10 +1,11 @@
 from torchvision.transforms.v2 import ColorJitter, RandomHorizontalFlip
 from torchvision.transforms.v2 import GaussianBlur, Compose, RandomRotation
 
-_AUGMENTATION_NOT_SUPPORTED_ERROR = '''
-The transform specified is not in the list of supported transforms 
-for augmentation. Supported augmentations are: ColorJitter, RandomHorizontalFlip,
-GaussianBlur and RandomRotation.
+_ALL_SUPPORTED_AUGMENTATIONS = ['color_jitter', 'horizontal_flip', 'random_rotation', 'gaussian_blur']
+
+_AUGMENTATION_NOT_SUPPORTED_ERROR = lambda aug: f'''\
+{aug} is not in the list of supported transforms for augmentation. \
+Supported augmentations are: {_ALL_SUPPORTED_AUGMENTATIONS}
 '''
 
 def get_augmentations(augmentation_config: dict):
@@ -32,6 +33,9 @@ def get_augmentations(augmentation_config: dict):
             augmentation_list.append(GaussianBlur(kernel_size, sigma))
             
         else:
-            raise ValueError(_AUGMENTATION_NOT_SUPPORTED_ERROR)
+            raise ValueError(_AUGMENTATION_NOT_SUPPORTED_ERROR(augmentation))
+    
+    augmentations = Compose(augmentation_list)
+    print(f'Using Augmentations: {augmentations}')
         
-    return Compose(augmentation_list)
+    return augmentations
