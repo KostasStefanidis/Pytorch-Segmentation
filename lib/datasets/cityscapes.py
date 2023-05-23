@@ -111,7 +111,9 @@ class CityscapesTestSplit(Cityscapes):
 class CityscapesDataset(Cityscapes):
     '''
     This class wraps image and target in datapoints.Image and datapoints.Mask
-    objects in order to use tranforms.v2 API for augmentation.
+    objects respectively in order to use tranforms.v2 API for augmentation. The augmentations 
+    are performed fisrt followed by transform and target_transform, applied to image and target respectively
+    in order to, for example, normalize image values to [0,1] and to convert target to one-hot encoding.
     '''
     def __init__(self, 
                  root: str, 
@@ -160,8 +162,8 @@ class CityscapesDataModule(pl.LightningDataModule):
     def __init__(self, 
                  dataset_config: dict, 
                  augmentation_config: dict,
-                 transform: Callable[..., Any] | None = None,
-                 target_transform: Callable[..., Any] | None = None,
+                 transform: Callable[..., Any] = DEFAULT_TRANSFORM,
+                 target_transform: Callable[..., Any] = DEFAULT_TARGET_TRANSFORM(self.num_classes),
                  ) -> None:
         
         super().__init__()
@@ -171,13 +173,7 @@ class CityscapesDataModule(pl.LightningDataModule):
         self.num_classes = dataset_config.get('num_classes', 20)
         self.batch_size = dataset_config.get('batch_size', 3)
         self.num_workers = dataset_config.get('num_workers', 4)
-        self.shuffle = dataset_config.get('shuffle', True)
-        if target_transform is not None:
-            self.target_transform = target_transform  
-        else: 
-            self.target_transform = DEFAULT_TARGET_TRANSFORM(self.num_classes)
-            
-        self.transform = transform if transform is not None else DEFAULT_TRANSFORM
+        self.shuffle = dataset_config.get('shuffle', True) 
         
         if augmentation_config is not None:
             self.augmentations = get_augmentations(augmentation_config)
