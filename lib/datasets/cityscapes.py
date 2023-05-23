@@ -110,9 +110,8 @@ class CityscapesTestSplit(Cityscapes):
 
 class CityscapesDataset(Cityscapes):
     '''
-    Helpler class to wrap Cityscapes with adittional funcionality.
-    To be used with transforms v2. Images need to be wrapped in datapoint.Image object
-    and target in datapoint.Mask
+    This class wraps image and target in datapoints.Image and datapoints.Mask
+    objects in order to use tranforms.v2 API for augmentation.
     '''
     def __init__(self, 
                  root: str, 
@@ -172,6 +171,7 @@ class CityscapesDataModule(pl.LightningDataModule):
         self.num_classes = dataset_config.get('num_classes', 20)
         self.batch_size = dataset_config.get('batch_size', 3)
         self.num_workers = dataset_config.get('num_workers', 4)
+        self.shuffle = dataset_config.get('shuffle', True)
         if target_transform is not None:
             self.target_transform = target_transform  
         else: 
@@ -218,10 +218,11 @@ class CityscapesDataModule(pl.LightningDataModule):
         sampler = DistributedSampler(self.train_ds) if torch.distributed.is_initialized() else None
         return DataLoader(self.train_ds, 
                           self.batch_size, 
-                          shuffle=True and sampler is None, 
+                          shuffle=self.shuffle and sampler is None, 
                           num_workers=self.num_workers, 
                           pin_memory=True,
-                          sampler=sampler)
+                          sampler=sampler,
+                          worker_init_fn=seed_worker)
     
     def val_dataloader(self):
         sampler = DistributedSampler(self.val_ds) if torch.distributed.is_initialized() else None
@@ -230,7 +231,8 @@ class CityscapesDataModule(pl.LightningDataModule):
                           shuffle=False, 
                           num_workers=self.num_workers, 
                           pin_memory=True,
-                          sampler=sampler)
+                          sampler=sampler,
+                          worker_init_fn=seed_worker)
     
     def test_dataloader(self):
         return DataLoader(self.val_ds, 
@@ -238,22 +240,26 @@ class CityscapesDataModule(pl.LightningDataModule):
                           shuffle=False, 
                           num_workers=self.num_workers, 
                           pin_memory=True)
-        
+
     def predict_dataloader(self):
         return DataLoader(self.test_ds, 
                           self.batch_size, 
                           shuffle=False, 
-                          num_workers=self.num_workers, 
-                          pin_memory=True)
+                          num_workers=self.num_workers)
 
-
-#def _worker_init_function():
+# Function to provide consistent seeds to Dataloader workers
+# to ensure Reproducability. Whether Reproducability is desired
+# should be defined ih the configuration file and passed to the Datamodule
+def seed_worker(worker_id):
+    worker_seed = torch.initial_seed() % 2**32
+    numpy.random.seed(worker_seed)
+    random.seed(worker_seed)
     
 
 def get_preprocessing(self, backbone, weight_version):
 
     preprocessing_options = {
-        'default': transforms.ToTensor(), # Convert to Tensor and
+        'default': DEFAULT_TRANSFORM,
         #'ResNet': resnet.preprocess_input,
         #'ResNetV2' : resnet_v2.preprocess_input,
         #'MobileNet' : mobilenet.preprocess_input,
