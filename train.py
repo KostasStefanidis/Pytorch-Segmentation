@@ -4,6 +4,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint, StochasticWeightAveragi
 from lightning.pytorch.callbacks import ModelSummary, LearningRateFinder, TQDMProgressBar
 from lightning.pytorch.loggers import TensorBoardLogger
 from torchsummary import summary
+import numpy as np
 import yaml
 from lib.datasets.cityscapes import CityscapesDataModule
 from lib.models.base_module import SegmentationModule
@@ -17,8 +18,7 @@ def parse_args():
                         required=True,
                         type=str, 
                         nargs='?')
-    parser.add_argument('--seed', type=int, default=112)
-    #parser.add_argument("--local_rank", type=int, default=-1)       
+    parser.add_argument('--seed', type=int, default=112)      
     args = parser.parse_args()
     return args
 
@@ -29,6 +29,7 @@ def main():
         import random
         print('Seeding with', args.seed)
         random.seed(args.seed)
+        np.random.seed(args.seed)
         torch.manual_seed(args.seed)
         torch.cuda.manual_seed(args.seed)
         torch.cuda.manual_seed_all(args.seed)
@@ -37,26 +38,16 @@ def main():
         config: dict = yaml.safe_load(config_file)
 
     # TODO: Add default values if a variable is not defined in the config file
-    LOGS_DIR = config.get('logs_dir')
+    logs_dir = config.get('logs_dir')
     model_config: dict = config.get('model_config')
     dataset_config: dict = config.get('dataset_config')
     train_config: dict = config.get('train_config')
     augmentation_config: dict = train_config.get('augmentations')
-
-    # Dataset Configuration
-    # DATASET = dataset_config.get('name')
-    NUM_TRAIN_BATCHES = dataset_config.get('num_train_batches', 1.0)
-    NUM_EVAL_BATCHES = dataset_config.get('num_eval_batches', 1.0)
+    distribute_config: dict = train_config.get('distribute')
 
     # Model Configuration
     MODEL_TYPE = model_config.get('architecture')
     MODEL_NAME = model_config.get('name')
-
-    EPOCHS = train_config.get('epochs') #
-    PRECISION = str(train_config.get('precision')) #
-    DISTRIBUTE_STRATEGY = train_config.get('distribute').get('strategy')
-    DEVICES = train_config.get('distribute').get('devices')
-    sync_batchnorm = train_config.get('distribute').get('sync_batchnorm')
     
     USE_EARLY_STOPPING = train_config.get('early_stopping', False)
     
@@ -68,7 +59,7 @@ def main():
 
     # --------------------------- Callbacks ----------------------------
     model_checkpoint_path = f'saved_models/{MODEL_TYPE}/{MODEL_NAME}'
-    model_checkpoint_callback = ModelCheckpoint(dirpath=LOGS_DIR,
+    model_checkpoint_callback = ModelCheckpoint(dirpath=logs_dir,
                                                 filename=model_checkpoint_path,
                                                 save_weights_only=False,
                                                 monitor='val_Mean_IoU',
@@ -95,32 +86,32 @@ def main():
         callbacks.append(swa_callback)
 
 
-    logger = TensorBoardLogger(save_dir=f'{LOGS_DIR}/Tensorboard_logs',
+    logger = TensorBoardLogger(save_dir=f'{logs_dir}/Tensorboard_logs',
                                name=f'{MODEL_TYPE}',
                                version=f'{MODEL_NAME}')
 
 
     # --------------------------- Define Model -------------------------------
-    torch.set_float32_matmul_precision(PRECISION)
+    torch.set_float32_matmul_precision(str(train_config.get('precision')))
 
     trainer = pl.Trainer(
-        limit_train_batches=NUM_TRAIN_BATCHES,
-        limit_val_batches=NUM_EVAL_BATCHES,
-        max_epochs=EPOCHS,
+        limit_train_batches=dataset_config.get('num_train_batches', 1.0),
+        limit_val_batches=dataset_config.get('num_eval_batches', 1.0),
+        max_epochs=train_config.get('epochs'),
         callbacks=callbacks,
-        default_root_dir=LOGS_DIR,
+        default_root_dir=logs_dir,
         logger=logger,
         accelerator='gpu',
-        devices=DEVICES,
-        strategy=DISTRIBUTE_STRATEGY,
-        sync_batchnorm=sync_batchnorm,
+        devices=distribute_config.get('devices'),
+        strategy=distribute_config.get('strategy'),
+        sync_batchnorm=distribute_config.get('sync_batchnorm'),
         #profiler='simple',
     )
     
     model = SegmentationModule(
-        model_config = model_config,
-        train_config = train_config,
-        logs_dir = LOGS_DIR
+        model_config=model_config,
+        train_config=train_config,
+        logs_dir=logs_dir
     )
 
     datamodule = CityscapesDataModule(dataset_config, augmentation_config)
