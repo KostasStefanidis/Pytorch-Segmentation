@@ -16,7 +16,6 @@ from torchvision.models.regnet import regnet_y_8gf, regnet_y_16gf, regnet_y_32gf
 from torchvision.models import RegNet_Y_16GF_Weights, RegNet_Y_32GF_Weights
 from torchvision.models import RegNet_Y_8GF_Weights, EfficientNet_V2_M_Weights
 from torchvision.models import MobileNet_V3_Large_Weights, ResNet50_Weights, ResNet101_Weights
-
 from lib.models.base_module import SegmentationModule
 
 
@@ -40,18 +39,83 @@ from torchvision.models.segmentation.deeplabv3 import deeplabv3_resnet50, DeepLa
 from torchvision.models.segmentation.deeplabv3 import deeplabv3_resnet101, DeepLabV3_ResNet101_Weights
 
 
-class DeepLabV3(SegmentationModule):
-    def __init__(self, 
-                 model: Module, 
-                 num_classes: int, 
-                 train_config: dict = None, 
-                 prediction_dir: str = None, 
-                 model_type: str = None, 
-                 model_name: str = None
-                 ) -> None:
+class DeepLabV3_EfficientNet_V2_M_Weights(WeightsEnum):
+    COCO_WITH_VOC_LABELS_V1 = Weights(
+        url="https://download.pytorch.org/models/deeplabv3_resnet50_coco-cd0a2569.pth",
+        transforms=partial(SemanticSegmentation, resize_size=520),
+        meta={
+            **_COMMON_META,
+            "num_params": 42004074,
+            "recipe": "https://github.com/pytorch/vision/tree/main/references/segmentation#deeplabv3_resnet50",
+            "_metrics": {
+                "COCO-val2017-VOC-labels": {
+                    "miou": 66.4,
+                    "pixel_acc": 92.4,
+                }
+            },
+            "_ops": 178.722,
+            "_file_size": 160.515,
+        },
+    )
+    DEFAULT = COCO_WITH_VOC_LABELS_V1
+
+class SegmentationHead(nn.Module):
+    def __init__(self, in_channels: int, num_classes: int):
+        super.__init__()
+        self.conv2d = nn.Conv2d(in_channels, num_classes, 1)
         
-        super().__init__(model, num_classes, train_config, prediction_dir, model_type, model_name)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.conv2d(x)
+
+class BaseDeepLabV3(nn.Sequential):
+    def __init__(self, in_channels: int) -> None:
+        super().__init__(
+            ASPP(in_channels, [12, 24, 36]),
+            nn.Conv2d(256, 256, 3, padding=1, bias=False),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+        )
+
+class DeepLabHead(nn.Module):
+    def __init__(self, in_channels: int, num_classes: int) -> None:
+        super().__init__()
+        self.base_deeplabv3 = BaseDeepLabV3(in_channels)
+        self.seg_head = SegmentationHead(256, num_classes)
+        
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.base_deeplabv3(x)
+        return self.seg_head(x)
     
+    
+def _deeplabv3_efficientnetv2():
+    stage_indices = [0] + [i for i, b in enumerate(backbone) if getattr(b, "_is_cn", False)] + [len(backbone) - 1]
+    out_pos = stage_indices[-1]  # use C5 which has output_stride = 16
+    out_inplanes = backbone[out_pos].out_channels
+    aux_pos = stage_indices[-4]  # use C2 here which has output_stride = 8
+    aux_inplanes = backbone[aux_pos].out_channels
+    return_layers = {str(out_pos): "out"}
+    
+    aux_classifier = FCNHead(aux_inplanes, num_classes) if aux else None
+    classifier = DeepLabHead(out_inplanes, num_classes)
+    
+    return DeepLabV3(backbone, classifier, aux_classifier)
+
+def deeplab_v3_efficientnet_v2_m():
+    #weights = DeepLabV3_MobileNet_V3_Large_Weights.verify(weights)
+    weights_backbone = EfficientNet_V2_M_Weights.verify(weights_backbone)
+
+    if weights is not None:
+        weights_backbone = None
+        num_classes = _ovewrite_value_param("num_classes", num_classes, len(weights.meta["categories"]))
+        aux_loss = _ovewrite_value_param("aux_loss", aux_loss, True)
+
+    backbone = efficientnet_v2_m(weights=weights_backbone, dilated=True)
+    model = _deeplabv3_efficientnetv2(backbone, num_classes, aux_loss)
+
+    if weights is not None:
+        model.load_state_dict(weights.get_state_dict(progress=progress, check_hash=True))
+        
+    return model    
     
 
 def get_backbone(backbone_name: str, 
