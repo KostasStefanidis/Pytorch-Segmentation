@@ -3,6 +3,7 @@ import torch
 from lightning.pytorch.callbacks import ModelCheckpoint, StochasticWeightAveraging, EarlyStopping
 from lightning.pytorch.callbacks import ModelSummary, LearningRateFinder, TQDMProgressBar
 from lightning.pytorch.loggers import TensorBoardLogger
+from lightning.pytorch.profilers import SimpleProfiler
 from torchsummary import summary
 import numpy as np
 import yaml
@@ -90,6 +91,8 @@ def main():
                                name=f'{MODEL_TYPE}',
                                version=f'{MODEL_NAME}')
 
+    profiler = SimpleProfiler(dirpath=f'{logs_dir}/profiler_logs',
+                              filename=f'{MODEL_TYPE}/{MODEL_NAME}')
 
     # --------------------------- Define Model -------------------------------
     torch.set_float32_matmul_precision(str(train_config.get('precision')))
@@ -105,7 +108,7 @@ def main():
         devices=distribute_config.get('devices'),
         strategy=distribute_config.get('strategy'),
         sync_batchnorm=distribute_config.get('sync_batchnorm'),
-        #profiler='simple',
+        profiler=profiler,
     )
     
     model = SegmentationModule(
@@ -116,7 +119,7 @@ def main():
 
     datamodule = CityscapesDataModule(dataset_config, augmentation_config)
     
-    #trainer.fit(model, datamodule=datamodule)
+    trainer.fit(model, datamodule=datamodule)
 
     
 if __name__ == '__main__':
