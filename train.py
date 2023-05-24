@@ -116,7 +116,8 @@ def main():
 
     datamodule = CityscapesDataModule(dataset_config, augmentation_config)
     
-    trainer.fit(model, datamodule=datamodule)
+    #trainer.fit(model, datamodule=datamodule)
+
     
 if __name__ == '__main__':
     main()

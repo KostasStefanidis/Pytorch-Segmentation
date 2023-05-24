@@ -39,25 +39,25 @@ from torchvision.models.segmentation.deeplabv3 import deeplabv3_resnet50, DeepLa
 from torchvision.models.segmentation.deeplabv3 import deeplabv3_resnet101, DeepLabV3_ResNet101_Weights
 
 
-class DeepLabV3_EfficientNet_V2_M_Weights(WeightsEnum):
-    COCO_WITH_VOC_LABELS_V1 = Weights(
-        url="https://download.pytorch.org/models/deeplabv3_resnet50_coco-cd0a2569.pth",
-        transforms=partial(SemanticSegmentation, resize_size=520),
-        meta={
-            **_COMMON_META,
-            "num_params": 42004074,
-            "recipe": "https://github.com/pytorch/vision/tree/main/references/segmentation#deeplabv3_resnet50",
-            "_metrics": {
-                "COCO-val2017-VOC-labels": {
-                    "miou": 66.4,
-                    "pixel_acc": 92.4,
-                }
-            },
-            "_ops": 178.722,
-            "_file_size": 160.515,
-        },
-    )
-    DEFAULT = COCO_WITH_VOC_LABELS_V1
+# class DeepLabV3_EfficientNet_V2_M_Weights(WeightsEnum):
+#     COCO_WITH_VOC_LABELS_V1 = Weights(
+#         url="https://download.pytorch.org/models/deeplabv3_resnet50_coco-cd0a2569.pth",
+#         transforms=partial(SemanticSegmentation, resize_size=520),
+#         meta={
+#             **_COMMON_META,
+#             "num_params": 42004074,
+#             "recipe": "https://github.com/pytorch/vision/tree/main/references/segmentation#deeplabv3_resnet50",
+#             "_metrics": {
+#                 "COCO-val2017-VOC-labels": {
+#                     "miou": 66.4,
+#                     "pixel_acc": 92.4,
+#                 }
+#             },
+#             "_ops": 178.722,
+#             "_file_size": 160.515,
+#         },
+#     )
+#     DEFAULT = COCO_WITH_VOC_LABELS_V1
 
 class SegmentationHead(nn.Module):
     def __init__(self, in_channels: int, num_classes: int):

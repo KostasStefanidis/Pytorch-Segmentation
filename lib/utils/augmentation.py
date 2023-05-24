@@ -15,15 +15,17 @@ def get_augmentations(augmentation_config: dict):
     augmentation_list = []
     
     for augmentation in augmentation_config.keys():
+        print('Augmentation: ', augmentation)
         if augmentation == 'color_jitter':
-            brightness = augmentation_config.get('color_jitter').get('brightness', 0.3)
-            contrast = augmentation_config.get('color_jitter').get('contrast', 0.3)
-            saturation = augmentation_config.get('color_jitter').get('saturation', 0.2)
+            brightness = augmentation_config.get('color_jitter').get('brightness', 0.0)
+            contrast = augmentation_config.get('color_jitter').get('contrast', 0.0)
+            saturation = augmentation_config.get('color_jitter').get('saturation', 0.0)
             hue = augmentation_config.get('color_jitter').get('hue', 0.0)
             augmentation_list.append(ColorJitter(brightness, contrast, saturation, hue))
             
         elif augmentation == 'horizontal_flip':
-            flip_probability = augmentation_config.get('horizontal_flip', 0.5)
+            flip_probability_value = augmentation_config.get('horizontal_flip')
+            flip_probability = 0.5 if flip_probability_value is None else flip_probability_value
             augmentation_list.append(RandomHorizontalFlip(flip_probability))
             
         elif augmentation == 'random_rotation':
@@ -39,6 +41,7 @@ def get_augmentations(augmentation_config: dict):
             raise ValueError(_AUGMENTATION_NOT_SUPPORTED_ERROR(augmentation))
     
     augmentations = Compose(augmentation_list)
+    print('')
     print(f'Using Augmentations: {augmentations}')
         
     return augmentations
