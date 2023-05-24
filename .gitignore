@@ -127,3 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+logs
+lightning_logs
+Tensorboard_logs
+saved_models
