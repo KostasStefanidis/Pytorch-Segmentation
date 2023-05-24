@@ -238,8 +238,6 @@ class CityscapesDataModule(pl.LightningDataModule):
             worker_init_fn = None
             shuffle_sampler = True
         sampler = DistributedSampler(self.train_ds, shuffle=shuffle_sampler) if torch.distributed.is_initialized() else None
-        if sampler is not None:
-            print("INFO:PyTorch: Using DistributedSampler for train_dataloader !")
         return DataLoader(dataset=self.train_ds, 
                           batch_size=self.batch_size, 
                           shuffle=self.shuffle and sampler is None, 
@@ -250,8 +248,6 @@ class CityscapesDataModule(pl.LightningDataModule):
     
     def val_dataloader(self):
         sampler = DistributedSampler(self.val_ds) if torch.distributed.is_initialized() else None
-        if sampler is not None:
-            print("INFO:PyTorch: Using DistributedSampler for val_dataloader !")
         return DataLoader(dataset=self.val_ds, 
                           batch_size=self.batch_size, 
                           shuffle=False, 
