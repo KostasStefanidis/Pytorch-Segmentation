@@ -16,6 +16,7 @@ import torchvision.transforms.v2 as transformsv2
 from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import get_worker_info
 from lib.utils.augmentation import get_augmentations
+from lib.datasets.utils import deterministic_init_worker
 
 
 _IGNORE_IDS = [-1,0,1,2,3,4,5,6,9,10,14,15,16,18,29,30]
@@ -269,15 +270,7 @@ class CityscapesDataModule(pl.LightningDataModule):
                           num_workers=self.num_workers,
                           pin_memory=self.pin_memory)
 
-# Function to provide consistent seeds to Dataloader workers
-# to ensure Reproducability. Whether Reproducability is desired
-# should be defined ih the configuration file and passed to the Datamodule
-def deterministic_init_worker(worker_id):
-    worker_seed = torch.initial_seed() % 2**32
-    numpy.random.seed(worker_seed)
-    random.seed(worker_seed)
     
-
 def get_preprocessing(self, backbone, weight_version):
 
     preprocessing_options = {
