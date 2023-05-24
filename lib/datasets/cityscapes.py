@@ -97,7 +97,6 @@ class CityscapesTestSplit(Cityscapes):
         image_filename = image_path.split('/')[-1]
         
         image = Image.open(image_path).convert("RGB")
-        # need custon collate_fn to return filename
         
         if self.transform is not None:
             image = self.transform(image)
@@ -159,11 +158,16 @@ class CityscapesDataset(Cityscapes):
 
 
 class CityscapesDataModule(pl.LightningDataModule):
+    '''
+    The Cityscapes DataModule contains all the logic for the dataset splits and 
+    respective dataloaders for the Cityscapes dataset. 
+    '''
     def __init__(self, 
                  dataset_config: dict, 
                  augmentation_config: dict,
-                 transform: Callable[..., Any] = DEFAULT_TRANSFORM,
-                 target_transform: Callable[..., Any] = DEFAULT_TARGET_TRANSFORM(self.num_classes),
+                 transform: Callable[..., Any] = None,
+                 target_transform: Callable[..., Any] = None,
+                 deterministic: bool = False
                  ) -> None:
         
         super().__init__()
@@ -172,8 +176,19 @@ class CityscapesDataModule(pl.LightningDataModule):
         self.target_type = dataset_config.get('type', 'semantic')
         self.num_classes = dataset_config.get('num_classes', 20)
         self.batch_size = dataset_config.get('batch_size', 3)
+        self.shuffle = dataset_config.get('shuffle', True)
         self.num_workers = dataset_config.get('num_workers', 4)
-        self.shuffle = dataset_config.get('shuffle', True) 
+        self.pin_memory = dataset_config.get('pin_memory', True)
+        
+        # Define whether deterministic data loading is desired
+        self.deterministic = deterministic
+        
+        if target_transform is not None:
+            self.target_transform = target_transform  
+        else:
+            self.target_transform = DEFAULT_TARGET_TRANSFORM(self.num_classes)
+            
+        self.transform = transform if transform is not None else DEFAULT_TRANSFORM
         
         if augmentation_config is not None:
             self.augmentations = get_augmentations(augmentation_config)
@@ -211,42 +226,53 @@ class CityscapesDataModule(pl.LightningDataModule):
                                                   transform=self.transform)
     
     def train_dataloader(self):
-        sampler = DistributedSampler(self.train_ds) if torch.distributed.is_initialized() else None
+        if deterministic:
+            worker_init_fn = deterministic_init_worker
+            shuffle_sampler = False
+            print("INFO:PyTorch: Using deterministic worker initialization for train_dataloader !")
+        else:
+            worker_init_fn = None
+            shuffle_sampler = True
+        sampler = DistributedSampler(self.train_ds, shuffle=shuffle_sampler) if torch.distributed.is_initialized() else None
+        if sampler is not None:
+            print("INFO:PyTorch: Using DistributedSampler for train_dataloader !")
         return DataLoader(self.train_ds, 
                           self.batch_size, 
                           shuffle=self.shuffle and sampler is None, 
                           num_workers=self.num_workers, 
-                          pin_memory=True,
+                          pin_memory=self.pin_memory,
                           sampler=sampler,
-                          worker_init_fn=seed_worker)
+                          worker_init_fn=worker_init_fn)
     
     def val_dataloader(self):
         sampler = DistributedSampler(self.val_ds) if torch.distributed.is_initialized() else None
+        if sampler is not None:
+            print("INFO:PyTorch: Using DistributedSampler for val_dataloader !")
         return DataLoader(self.val_ds, 
                           self.batch_size, 
                           shuffle=False, 
                           num_workers=self.num_workers, 
-                          pin_memory=True,
-                          sampler=sampler,
-                          worker_init_fn=seed_worker)
+                          pin_memory=self.pin_memory,
+                          sampler=sampler)
     
     def test_dataloader(self):
         return DataLoader(self.val_ds, 
                           self.batch_size, 
                           shuffle=False, 
                           num_workers=self.num_workers, 
-                          pin_memory=True)
+                          pin_memory=self.pin_memory)
 
     def predict_dataloader(self):
         return DataLoader(self.test_ds, 
                           self.batch_size, 
                           shuffle=False, 
-                          num_workers=self.num_workers)
+                          num_workers=self.num_workers,
+                          pin_memory=self.pin_memory)
 
 # Function to provide consistent seeds to Dataloader workers
 # to ensure Reproducability. Whether Reproducability is desired
 # should be defined ih the configuration file and passed to the Datamodule
-def seed_worker(worker_id):
+def deterministic_init_worker(worker_id):
     worker_seed = torch.initial_seed() % 2**32
     numpy.random.seed(worker_seed)
     random.seed(worker_seed)
