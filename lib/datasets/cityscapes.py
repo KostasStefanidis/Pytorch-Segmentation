@@ -5,6 +5,8 @@ import lightning.pytorch as pl
 from torchvision.datasets import Cityscapes
 from torch.utils.data import DataLoader
 from torchvision import transforms
+import numpy as np
+import random
 from typing import Tuple, List, Optional, Callable, Any, Union
 from PIL import Image
 from torchvision.models import RegNet_Y_16GF_Weights, RegNet_Y_32GF_Weights
@@ -98,6 +100,7 @@ class CityscapesTestSplit(Cityscapes):
         image_filename = image_path.split('/')[-1]
         
         image = Image.open(image_path).convert("RGB")
+        image = datapoints.Image(image)
         
         if self.transform is not None:
             image = self.transform(image)
@@ -165,7 +168,7 @@ class CityscapesDataModule(pl.LightningDataModule):
     '''
     def __init__(self, 
                  dataset_config: dict, 
-                 augmentation_config: dict,
+                 augmentation_config: dict = None,
                  transform: Callable[..., Any] = None,
                  target_transform: Callable[..., Any] = None,
                  deterministic: bool = False
@@ -176,7 +179,7 @@ class CityscapesDataModule(pl.LightningDataModule):
         self.mode = dataset_config.get('mode', 'fine')
         self.target_type = dataset_config.get('type', 'semantic')
         self.num_classes = dataset_config.get('num_classes', 20)
-        self.batch_size = dataset_config.get('batch_size', 3)
+        self.batch_size = dataset_config.get('batch_size', 2)
         self.shuffle = dataset_config.get('shuffle', True)
         self.num_workers = dataset_config.get('num_workers', 4)
         self.pin_memory = dataset_config.get('pin_memory', True)
@@ -227,7 +230,7 @@ class CityscapesDataModule(pl.LightningDataModule):
                                                   transform=self.transform)
     
     def train_dataloader(self):
-        if deterministic:
+        if self.deterministic:
             worker_init_fn = deterministic_init_worker
             shuffle_sampler = False
             print("INFO:PyTorch: Using deterministic worker initialization for train_dataloader !")
@@ -237,8 +240,8 @@ class CityscapesDataModule(pl.LightningDataModule):
         sampler = DistributedSampler(self.train_ds, shuffle=shuffle_sampler) if torch.distributed.is_initialized() else None
         if sampler is not None:
             print("INFO:PyTorch: Using DistributedSampler for train_dataloader !")
-        return DataLoader(self.train_ds, 
-                          self.batch_size, 
+        return DataLoader(dataset=self.train_ds, 
+                          batch_size=self.batch_size, 
                           shuffle=self.shuffle and sampler is None, 
                           num_workers=self.num_workers, 
                           pin_memory=self.pin_memory,
@@ -249,23 +252,23 @@ class CityscapesDataModule(pl.LightningDataModule):
         sampler = DistributedSampler(self.val_ds) if torch.distributed.is_initialized() else None
         if sampler is not None:
             print("INFO:PyTorch: Using DistributedSampler for val_dataloader !")
-        return DataLoader(self.val_ds, 
-                          self.batch_size, 
+        return DataLoader(dataset=self.val_ds, 
+                          batch_size=self.batch_size, 
                           shuffle=False, 
                           num_workers=self.num_workers, 
                           pin_memory=self.pin_memory,
                           sampler=sampler)
     
     def test_dataloader(self):
-        return DataLoader(self.val_ds, 
-                          self.batch_size, 
+        return DataLoader(dataset=self.test_ds, 
+                          batch_size=self.batch_size, 
                           shuffle=False, 
                           num_workers=self.num_workers, 
                           pin_memory=self.pin_memory)
 
     def predict_dataloader(self):
-        return DataLoader(self.test_ds, 
-                          self.batch_size, 
+        return DataLoader(dataset=self.predict_ds, 
+                          batch_size=self.batch_size, 
                           shuffle=False, 
                           num_workers=self.num_workers,
                           pin_memory=self.pin_memory)

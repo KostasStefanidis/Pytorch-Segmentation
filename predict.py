@@ -16,8 +16,8 @@ def main():
 
         LOGS_DIR = config.get('logs_dir')
 
-        dataset_config = config.get('dataset')
-        model_config = config.get('model')
+        dataset_config = config.get('dataset_config')
+        model_config = config.get('model_config')
         inference_config = config.get('inference_config')
 
         MODEL_TYPE = model_config.get('architecture')
@@ -37,11 +37,12 @@ def main():
 
     data_module = CityscapesDataModule(dataset_config=dataset_config)
 
-    model = SegmentationModule.load_from_checkpoint(checkpoint_dir)
+    model = SegmentationModule.load_from_checkpoint(checkpoint_dir, logs_dir=LOGS_DIR)
 
     trainer = pl.Trainer(
         accelerator='gpu',
         devices=1,
+        logger=False,
     )
 
     trainer.predict(model, datamodule=data_module, return_predictions=False)
