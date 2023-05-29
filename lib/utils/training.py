@@ -15,6 +15,7 @@ def get_loss(loss: str):
         #     loss_fn = RMILoss()
         return loss_fn
 
+
 def get_optimizer(optimizer_config:dict, model: nn.Module):
 
     optimizer_name = optimizer_config.get('name', 'Adam')
@@ -22,32 +23,32 @@ def get_optimizer(optimizer_config:dict, model: nn.Module):
     weight_decay = optimizer_config.get('weight_decay', 0)
     momentum = optimizer_config.get('momentum', 0)
     
+    trainable_params = list(filter(lambda p: p.requires_grad, model.parameters()))
+    
     optimizer_dict = {
-        'Adam' : Adam(params=model.parameters(),
+        'Adam' : Adam(trainable_params,
                         lr=lr,
                         weight_decay=weight_decay),
-        'Adadelta' : Adadelta(params=model.parameters(),
+        'Adadelta' : Adadelta(trainable_params,
                                 lr=lr,
                                 weight_decay=weight_decay),
-        'SGD' : SGD(params=model.parameters(),
+        'SGD' : SGD(trainable_params,
                     lr=lr,
                     momentum=momentum,
                     weight_decay=weight_decay)
     }
     
     return optimizer_dict[optimizer_name]
-   
+
+
 def get_lr_schedule(lr_schedule_config:dict, 
-                     optimizer: torch.optim
-                     ):
-    #lr = optimizer_config.get('learnin_rate', 1e-3)
+                    optimizer: torch.optim
+                    ):
+    
+    if lr_schedule_config is None:
+        return None
+
     schedule = lr_schedule_config.get('name')
-    
-    # num of steps in cyclic lr should be cycle_epochs * steps_per_epoch
-    # steps_per_epoch is defined depended on the length of the dataset
-    # so maybe define the dataset inside the Lightning Module using 
-    # the DataModule object
-    
     if schedule in ['Polynomial', 'PolynomialLr', 'PolynomialLR', 'polynomial']:
         decay_epochs = lr_schedule_config.get('decay_epochs')
         power = lr_schedule_config.get('power')
