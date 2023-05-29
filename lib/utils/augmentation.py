@@ -1,6 +1,9 @@
+from typing import Any
 import torchvision
+import numpy as np
+import torch
 from torchvision.transforms.v2 import ColorJitter, RandomHorizontalFlip
-from torchvision.transforms.v2 import GaussianBlur, Compose, RandomRotation
+from torchvision.transforms.v2 import GaussianBlur, Compose, RandomRotation, AugMix
 
 torchvision.disable_beta_transforms_warning()
 
@@ -45,3 +48,17 @@ def get_augmentations(augmentation_config: dict):
     print(f'Using Augmentations: {augmentations}')
         
     return augmentations
+
+class Mixup():
+    def __init__(self, alpha) -> None:
+        self.alpha = alpha
+    
+    def __call__(self, image, target, num_classes):
+        
+        indices = torch.randperm(image.size(0))
+        image2 = image[indices]
+        target2 = target[indices]
+        lam = torch.FloatTensor([np.random.beta(self.alpha, self.alpha)])
+        data = image * lam + image2 * (1 - lam)
+        targets = target * lam + target2 * (1 - lam)
+        return data, targets
