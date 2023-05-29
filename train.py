@@ -23,7 +23,7 @@ def parse_args():
                         nargs='?')
     parser.add_argument('--profiler', action='store_true')
     parser.add_argument('--early_stopping', action='store_true')
-    parser.add_argument('--seed', type=int, default=112)      
+    parser.add_argument('--seed', type=int, default=-1)      
     args = parser.parse_args()
     return args
 
