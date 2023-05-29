@@ -1,7 +1,8 @@
 import lightning.pytorch as pl
 import torch
-from lightning.pytorch.callbacks import ModelCheckpoint, StochasticWeightAveraging, EarlyStopping
-from lightning.pytorch.callbacks import ModelSummary, LearningRateFinder, TQDMProgressBar
+from lightning.pytorch.callbacks import ModelCheckpoint, StochasticWeightAveraging
+from lightning.pytorch.callbacks import ModelSummary, LearningRateMonitor, EarlyStopping
+from lightning.pytorch.callbacks import RichProgressBar, RichModelSummary
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.profilers import SimpleProfiler
 from torchsummary import summary
@@ -9,6 +10,7 @@ import numpy as np
 import yaml
 from lib.datasets.cityscapes import CityscapesDataModule
 from lib.models.base_module import SegmentationModule
+from lib.utils.callbacks import FreezeFeatureExtractor
 import yaml
 from argparse import ArgumentParser
 
@@ -19,12 +21,16 @@ def parse_args():
                         required=True,
                         type=str, 
                         nargs='?')
+    parser.add_argument('--profiler', action='store_true')
+    parser.add_argument('--early_stopping', action='store_true')
     parser.add_argument('--seed', type=int, default=112)      
     args = parser.parse_args()
     return args
 
 def main():
     args = parse_args()
+    use_profiler = args.profiler
+    use_early_stopping = args.early_stopping
     
     if args.seed > 0:
         import random
@@ -50,13 +56,11 @@ def main():
     MODEL_TYPE = model_config.get('architecture')
     MODEL_NAME = model_config.get('name')
     
-    USE_EARLY_STOPPING = train_config.get('early_stopping', False)
-    
     # Stohastic weight averaging parameters
     SWA = train_config.get('swa')
     if SWA is not None:
         SWA_LRS = SWA.get('lr', 1e-3)
-        SWA_EPOCH_START = SWA.get('epoch_start', 0.7)
+        SWA_EPOCH_START = SWA.get('epoch_start', 0.8)
 
     # --------------------------- Callbacks ----------------------------
     model_checkpoint_path = f'saved_models/{MODEL_TYPE}/{MODEL_NAME}'
@@ -75,10 +79,18 @@ def main():
                                             strict=True,
                                             check_finite=True,
                                             log_rank_zero_only=True)
+    
+    finetune_backbone_callback = FreezeFeatureExtractor(unfreeze_at_epoch=20)
 
-    callbacks = [model_checkpoint_callback, ModelSummary(max_depth=2)]
+    callbacks = [
+        model_checkpoint_callback, 
+        RichProgressBar(),
+        RichModelSummary(max_depth=2),
+        LearningRateMonitor('epoch'),
+        #finetune_backbone_callback
+    ]
 
-    if USE_EARLY_STOPPING:
+    if use_early_stopping:
         callbacks.append(early_stopping_callback)
     
     if SWA is not None:
@@ -91,8 +103,11 @@ def main():
                                name=f'{MODEL_TYPE}',
                                version=f'{MODEL_NAME}')
 
-    profiler = SimpleProfiler(dirpath=f'{logs_dir}/profiler_logs',
-                              filename=f'{MODEL_TYPE}/{MODEL_NAME}')
+    if use_profiler:
+        profiler = SimpleProfiler(dirpath=f'{logs_dir}/profiler_logs',
+                                filename=f'{MODEL_TYPE}/{MODEL_NAME}')
+    else:
+        profiler = None
 
     # --------------------------- Define Model -------------------------------
     torch.set_float32_matmul_precision(str(train_config.get('precision')))
@@ -108,7 +123,7 @@ def main():
         devices=distribute_config.get('devices'),
         strategy=distribute_config.get('strategy'),
         sync_batchnorm=distribute_config.get('sync_batchnorm'),
-        profiler=profiler,
+        profiler=profiler
     )
     
     model = SegmentationModule(
