@@ -6,8 +6,11 @@ from lib.utils.training import get_loss, get_lr_schedule, get_optimizer
 from torchvision.utils import draw_segmentation_masks
 from torchmetrics import JaccardIndex
 import os
-from torchvision.models.segmentation.deeplabv3 import deeplabv3_mobilenet_v3_large, deeplabv3_resnet50, deeplabv3_resnet101, DeepLabV3
+from torchvision.models.segmentation.deeplabv3 import deeplabv3_mobilenet_v3_large, deeplabv3_resnet50
+from torchvision.models.segmentation.deeplabv3 import deeplabv3_resnet101, DeepLabV3
 import torchvision.transforms.v2 as transformsv2
+from torchvision.models.mobilenetv3 import MobileNet_V3_Large_Weights
+from torchvision.models.resnet import ResNet101_Weights, ResNet50_Weights
 
 _EVAL_IDS =   [7,8,11,12,13,17,19,20,21,22,23,24,25,26,27,28,31,32,33, 0] # MAP VOID CLASS TO 0 -> TOTAL BLACK 
 _TRAIN_IDS =  [0,1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18,19]
@@ -19,14 +22,38 @@ Architecture: {arch} is not implemented. \
 Available architectures are: {_ALL_ARCHITECTURES}
 '''
 
-def get_model(architecture: str, backbone: str, num_classes: int):
-    if architecture == 'deeplabv3':
-        model_function_name = f'{architecture}_{backbone}'
-        model_func: function = eval(model_function_name)
-        model: DeepLabV3 = model_func(num_classes=num_classes)
-    else:
+_ALL_BACKBONES = {
+    'deeplabv3': ['mobilenet_v3_large', 'resnet50', 'resnet101']
+}
+
+_BACKBONE_NOT_IMPLEMENTED_ERROR_ = lambda arch, backbone: f'''\
+Backbone: {backbone} is not implemented for {arch}. \
+Available architectures are: {_ALL_BACKBONES[arch]}
+'''
+
+_BACKBONE_WEIGHTS = {
+    'mobilenet_v3_large': 'MobileNet_V3_Large_Weights',
+    'resnet50': 'ResNet50_Weights',
+    'resnet101': 'ResNet101_Weights'
+}
+
+def get_model(architecture: str, backbone: str, weights_backbone: str, num_classes: int):
+    architecture = architecture.lower()
+    if architecture not in _ALL_ARCHITECTURES:
         raise ValueError(_MODEL_NOT_IMPLEMENTED_ERROR(architecture))
+    
+    backbone = backbone.lower()
+    if backbone not in _ALL_BACKBONES[architecture]:
+        raise ValueError(_BACKBONE_NOT_IMPLEMENTED_ERROR_(architecture, backbone))
+    
+    model_function_name = f'{architecture}_{backbone}'
+    model_func: function = eval(model_function_name)
+    weights_backbone = eval(f'{_BACKBONE_WEIGHTS[backbone]}.{weights_backbone.upper()}')
+    
+    model: DeepLabV3 = model_func(num_classes=num_classes, weights_backbone=weights_backbone)
+    
     return model
+
 
 class SegmentationModule(pl.LightningModule):
     def __init__(self, 
@@ -42,10 +69,12 @@ class SegmentationModule(pl.LightningModule):
         self.model_name = model_config.get('name')
         self.model_arch = model_config.get('architecture')
         self.model_backbone = model_config.get('backbone')
+        self.weights_backbone = model_config.get('weights_backbone')
         self.weights = model_config.get('pretrained_weights')
         self.num_classes = model_config.get('num_classes', 20)
         
-        self.model = get_model(self.model_arch, self.model_backbone, self.num_classes)
+        self.model = get_model(self.model_arch, self.model_backbone,
+                               self.weights_backbone, self.num_classes)
         
         # Get all training parameters/configuration
         loss_str = train_config.get('loss', 'CrossEntropy')
