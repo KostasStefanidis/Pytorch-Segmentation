@@ -44,7 +44,6 @@ def main():
     with open(args.config, 'r') as config_file:
         config: dict = yaml.safe_load(config_file)
 
-    # TODO: Add default values if a variable is not defined in the config file
     logs_dir = config.get('logs_dir')
     model_config: dict = config.get('model_config')
     dataset_config: dict = config.get('dataset_config')
@@ -55,12 +54,6 @@ def main():
     # Model Configuration
     MODEL_TYPE = model_config.get('architecture')
     MODEL_NAME = model_config.get('name')
-    
-    # Stohastic weight averaging parameters
-    SWA = train_config.get('swa')
-    if SWA is not None:
-        SWA_LRS = SWA.get('lr', 1e-3)
-        SWA_EPOCH_START = SWA.get('epoch_start', 0.8)
 
     # --------------------------- Callbacks ----------------------------
     model_checkpoint_path = f'saved_models/{MODEL_TYPE}/{MODEL_NAME}'
@@ -71,7 +64,7 @@ def main():
                                                 mode='max',
                                                 verbose=True)
 
-    early_stopping_callback = EarlyStopping(patience=6,
+    early_stopping_callback = EarlyStopping(patience=10,
                                             monitor='val_Mean_IoU',
                                             mode='max',
                                             min_delta=1e-6,
@@ -93,9 +86,12 @@ def main():
     if use_early_stopping:
         callbacks.append(early_stopping_callback)
     
-    if SWA is not None:
-        swa_callback = StochasticWeightAveraging(swa_lrs=SWA_LRS,
-                                                 swa_epoch_start=SWA_EPOCH_START)
+    if train_config.get('swa') is not None:
+        swa_config = train_config.get('swa')
+        swa_callback = StochasticWeightAveraging(
+            swa_lrs=swa_config.get('lr', 1e-3),
+            swa_epoch_start=swa_config.get('epoch_start', 0.8)
+        )
         callbacks.append(swa_callback)
 
 
