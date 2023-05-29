@@ -1,7 +1,7 @@
 import lightning.pytorch as pl
 import torch
 from lightning.pytorch.callbacks import ModelCheckpoint, StochasticWeightAveraging
-from lightning.pytorch.callbacks import ModelSummary, LearningRateMonitor, EarlyStopping
+from lightning.pytorch.callbacks import LearningRateMonitor, EarlyStopping
 from lightning.pytorch.callbacks import RichProgressBar, RichModelSummary
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.profilers import SimpleProfiler
@@ -94,10 +94,10 @@ def main():
         )
         callbacks.append(swa_callback)
 
-
     logger = TensorBoardLogger(save_dir=f'{logs_dir}/Tensorboard_logs',
                                name=f'{MODEL_TYPE}',
-                               version=f'{MODEL_NAME}')
+                               version=f'{MODEL_NAME}',
+                               default_hp_metric=False)
 
     if use_profiler:
         profiler = SimpleProfiler(dirpath=f'{logs_dir}/profiler_logs',
@@ -105,7 +105,6 @@ def main():
     else:
         profiler = None
 
-    # --------------------------- Define Model -------------------------------
     torch.set_float32_matmul_precision(str(train_config.get('precision')))
 
     trainer = pl.Trainer(
