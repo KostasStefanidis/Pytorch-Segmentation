@@ -115,7 +115,7 @@ class CityscapesDataset(Cityscapes):
     '''
     This class wraps image and target in datapoints.Image and datapoints.Mask
     objects respectively in order to use tranforms.v2 API for augmentation. The augmentations 
-    are performed fisrt followed by transform and target_transform, applied to image and target respectively
+    are performed first followed by transform and target_transform, applied to image and target respectively
     in order to, for example, normalize image values to [0,1] and to convert target to one-hot encoding.
     '''
     def __init__(self, 
