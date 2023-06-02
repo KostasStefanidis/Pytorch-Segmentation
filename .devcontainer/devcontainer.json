@@ -2,7 +2,6 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
 	"name": "Pytorch 2.0",
-	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
 	"dockerComposeFile": "docker-compose.yaml",
 	"service": "pytorch",
 	"shutdownAction": "none",
@@ -10,18 +9,18 @@
 
 	"customizations": {
 		"vscode": {
-		  "settings": {},
-		  "extensions": [
-			"KevinRose.vsc-python-indent",
-			"ms-toolsai.jupyter",
-			"ms-toolsai.vscode-jupyter-powertoys",
-			"magicstack.MagicPython",
-			"ms-python.vscode-pylance",
-			"ms-python.python",
-			"redhat.vscode-yaml"
-		]
+			"settings": {},
+			"extensions": [
+				"KevinRose.vsc-python-indent",
+				"ms-toolsai.jupyter",
+				"ms-toolsai.vscode-jupyter-powertoys",
+				"magicstack.MagicPython",
+				"ms-python.vscode-pylance",
+				"ms-python.python",
+				"redhat.vscode-yaml"
+			]
 		}
-	  }
+	}
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
