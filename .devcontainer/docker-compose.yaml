@@ -1,0 +1,30 @@
+services:
+  pytorch:
+    image: pytorch:2.0.0
+    build:
+      context: .
+      dockerfile: pytorch-2.0.0.Dockerfile
+      args:
+        USERNAME: kstef
+        USER_ID: 1003
+        GROUP_ID: 1003
+      tags:
+        - "pytorch:2.0.0"
+    container_name: pytorch
+    hostname: pytorch-container
+    user: kstef
+    tty: true
+    stdin_open: true
+    shm_size: 64G
+    working_dir: /mnt/
+    volumes:
+      - /home/kstef/Pytorch-Segmentation:/mnt/Pytorch-Segmentation
+      - /home/kstef/dataset:/mnt/dataset:ro
+      - /home/kstef/logs/Pytorch-Segmentation:/mnt/logs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0', '1']
+              capabilities: [gpu]
