@@ -1,8 +1,9 @@
 import torch
 from torch import nn
 from torch.optim import Adam, SGD, LBFGS, Adadelta, Adamax, Adagrad, ASGD
-from torch.optim.lr_scheduler import CyclicLR, PolynomialLR, CosineAnnealingWarmRestarts
-from torch.optim.lr_scheduler import ReduceLROnPlateau, ConstantLR, StepLR, CosineAnnealingLR
+from torch.optim.lr_scheduler import CyclicLR, PolynomialLR
+from torch.optim.lr_scheduler import ExponentialLR, ConstantLR, StepLR
+from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
 
 def get_loss(loss: str):
         if loss in ['CrossEntropy', 'CrossEntropyLoss', 'crossentropy']:
@@ -47,27 +48,76 @@ def get_lr_schedule(lr_schedule_config:dict,
     
     if lr_schedule_config is None:
         return None
-
-    schedule = lr_schedule_config.get('name')
-    if schedule in ['Polynomial', 'PolynomialLr', 'PolynomialLR', 'polynomial']:
-        decay_epochs = lr_schedule_config.get('decay_epochs')
-        power = lr_schedule_config.get('power')
-        lr_schedule = PolynomialLR(
+    
+    lr_warmup_method = lr_schedule_config.get('warmup_method', 'constant')
+    lr_warmup_epochs = lr_schedule_config.get('warmup_epochs', 0)
+    lr_warmup_decay = lr_schedule_config.get('warmup_decay', 0.1)
+    
+    main_schedule: str = lr_schedule_config.get('main_schedule')
+    epochs = lr_schedule_config.get('main_schedule_epochs')
+    main_schedule = main_schedule.lower()
+    
+    gamma = lr_schedule_config.get('gamma', 1.0)
+    min_lr = lr_schedule_config.get('min_lr', 1e-3)
+    max_lr = lr_schedule_config.get('max_lr', 1e-2)
+    step_period = lr_schedule_config.get('step_period', 20)
+    
+    if main_schedule == 'polynomial':
+        main_lr_schedule = PolynomialLR(
             optimizer=optimizer,
-            total_iters=decay_epochs, #*steps_per_epoch,
-            power=power,
-            verbose=True
+            total_iters=epochs, # iters_per_epoch * (epochs - lr_warmup_epochs),
+            power=lr_schedule_config.get('power'),
         )
-        
-    elif schedule in ['CyclicLR', 'Cyclic', 'CyclicLr', 'cyclic']:
-        lr_schedule = CyclicLR(
+    elif main_schedule == "steplr":
+        main_lr_schedule = StepLR(
+            optimizer, step_size=step_period, gamma=gamma,
+        )
+    elif main_schedule == "cosineannealing":
+        main_lr_schedule = CosineAnnealingLR(
+            optimizer, 
+            T_max = epochs - lr_warmup_epochs, 
+            eta_min = min_lr,
+        )
+    elif main_schedule == "exponential":
+        main_lr_schedule = ExponentialLR(
+            optimizer, gamma=gamma,
+        )
+    elif main_schedule == 'cyclic':
+        main_lr_schedule = CyclicLR(
             optimizer = optimizer,
-            base_lr = lr_schedule_config.get('min_lr', 1e-3),
-            max_lr = lr_schedule_config.get('max_lr', 1e-2),
+            base_lr = min_lr,
+            max_lr = max_lr,
             # step_size_up=
             # step_size_down=
-            gamma = lr_schedule_config.get('gamma', 1.0),
-            verbose = True
+            gamma = gamma,
+        )
+    else:
+        raise RuntimeError(
+            f"Invalid lr scheduler '{main_schedule}'. Only StepLR, CosineAnnealingLR, "
+            "ExponentialLR, PolynomialLR, CyclicLR are supported."
         )
 
+    if lr_warmup_epochs > 0:
+        if lr_warmup_method == "linear":
+            warmup_lr_schedule = torch.optim.lr_scheduler.LinearLR(
+                optimizer, start_factor=lr_warmup_decay, total_iters=lr_warmup_epochs
+            )
+        elif lr_warmup_method == "constant":
+            warmup_lr_schedule = torch.optim.lr_scheduler.ConstantLR(
+                optimizer, factor=lr_warmup_decay, total_iters=lr_warmup_epochs
+            )
+        else:
+            raise RuntimeError(
+                f"Invalid warmup lr method '{lr_warmup_method}'. "
+                "Only linear and constant are supported."
+            )
+        
+        lr_schedule = torch.optim.lr_scheduler.SequentialLR(
+                    optimizer, 
+                    schedulers=[warmup_lr_schedule, main_lr_schedule], 
+                    milestones=[lr_warmup_epochs]
+                )
+    else:
+        lr_schedule = main_lr_schedule
+        
     return lr_schedule

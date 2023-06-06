@@ -10,7 +10,6 @@ import numpy as np
 import yaml
 from lib.datasets.cityscapes import CityscapesDataModule
 from lib.models.base_module import SegmentationModule
-from lib.utils.callbacks import FreezeFeatureExtractor
 import yaml
 from argparse import ArgumentParser
 
@@ -22,7 +21,7 @@ def parse_args():
                         type=str, 
                         nargs='?')
     parser.add_argument('--profiler', action='store_true')
-    parser.add_argument('--early_stopping', action='store_true')
+    parser.add_argument('--early-stopping', action='store_true', dest='early_stopping')
     parser.add_argument('--seed', type=int, default=-1)      
     args = parser.parse_args()
     return args
@@ -72,15 +71,12 @@ def main():
                                             strict=True,
                                             check_finite=True,
                                             log_rank_zero_only=True)
-    
-    finetune_backbone_callback = FreezeFeatureExtractor(unfreeze_at_epoch=20)
 
     callbacks = [
         model_checkpoint_callback, 
         RichProgressBar(),
         RichModelSummary(max_depth=2),
-        LearningRateMonitor('epoch'),
-        #finetune_backbone_callback
+        LearningRateMonitor('epoch')
     ]
 
     if use_early_stopping:
