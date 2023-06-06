@@ -17,7 +17,8 @@
 				"magicstack.MagicPython",
 				"ms-python.vscode-pylance",
 				"ms-python.python",
-				"redhat.vscode-yaml"
+				"redhat.vscode-yaml",
+				"RSIP-Vision.nvidia-smi-plus"
 			]
 		}
 	}
