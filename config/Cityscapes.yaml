@@ -1,7 +1,8 @@
 model_config:
-  name: Adam-lr_1e-3
+  name: foo
   architecture: deeplabv3
   backbone: mobilenet_v3_large
+  weights_backbone: imagenet1k_v2
   num_classes: 20
   unfreeze_at: block6a_expand_activation
   output_stride: 16
@@ -20,7 +21,7 @@ dataset_config:
 
 train_config:
   loss: CrossEntropyLoss
-  epochs: 80
+  epochs: 20
   precision: high
   distribute:
     strategy: ddp
@@ -28,15 +29,15 @@ train_config:
     sync_batchnorm: yes
   optimizer:
     name: Adam
-    #weight_decay: 0.00001
+    weight_decay: 0.00001
     learning_rate: 1e-3
-  lr_schedule:
-    warmup_method: linear
-    warmup_epochs: 50
-    warmup_decay: 0.01
-    main_schedule: polynomial
-    main_schedule_epochs: 20
-    power: 2
+  # lr_schedule:
+  #   warmup_method: linear
+  #   warmup_epochs: 50
+  #   warmup_decay: 0.01
+  #   main_schedule: polynomial
+  #   main_schedule_epochs: 20
+  #   power: 2
 
   # augmentations: 
   #   color_jitter: 

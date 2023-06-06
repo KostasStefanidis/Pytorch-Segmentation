@@ -5,6 +5,7 @@ from lib.models.base_module import SegmentationModule
 from argparse import ArgumentParser
 import yaml
 import os
+from lib.utils.callbacks import CityscapesPredictionWriter
 
 def main():
     parser = ArgumentParser('')
@@ -42,9 +43,11 @@ def main():
         accelerator='gpu',
         devices=1,
         logger=False,
+        callbacks=CityscapesPredictionWriter(logs_dir, MODEL_TYPE, MODEL_NAME)
     )
-
-    trainer.predict(model, datamodule=data_module, return_predictions=False)
     
+    trainer.predict(model, datamodule=data_module, return_predictions=False)
+
+
 if __name__ == '__main__':
     main()

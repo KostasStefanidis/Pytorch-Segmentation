@@ -120,7 +120,6 @@ def main():
     model = SegmentationModule(
         model_config=model_config,
         train_config=train_config,
-        logs_dir=logs_dir
     )
 
     datamodule = CityscapesDataModule(dataset_config, augmentation_config)
