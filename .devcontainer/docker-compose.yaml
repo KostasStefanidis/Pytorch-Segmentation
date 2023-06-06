@@ -15,16 +15,16 @@ services:
     user: kstef
     tty: true
     stdin_open: true
-    #shm_size: 64G
+    shm_size: 64G
     working_dir: /mnt/
     volumes:
       - /home/kstef/Pytorch-Segmentation:/mnt/Pytorch-Segmentation
-      # - /home/kstef/dataset:/mnt/dataset:ro
-      # - /home/kstef/logs/Pytorch-Segmentation:/mnt/logs
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           device_ids: ['0', '1']
-    #           capabilities: [gpu]
+      - /home/kstef/dataset:/mnt/dataset:ro
+      - /home/kstef/logs/Pytorch-Segmentation:/mnt/logs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0', '1']
+              capabilities: [gpu]

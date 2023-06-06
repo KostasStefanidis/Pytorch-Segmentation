@@ -30,10 +30,13 @@ train_config:
     name: Adam
     #weight_decay: 0.00001
     learning_rate: 1e-3
-  # lr_schedule:
-  #   name: Polynomial
-  #   decay_epochs: 20
-  #   power: 2
+  lr_schedule:
+    warmup_method: linear
+    warmup_epochs: 50
+    warmup_decay: 0.01
+    main_schedule: polynomial
+    main_schedule_epochs: 20
+    power: 2
 
   # augmentations: 
   #   color_jitter: 
