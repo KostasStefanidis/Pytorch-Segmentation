@@ -3,4 +3,4 @@ dataset_config:
   path: /mnt/dataset/Cityscapes/
   version: fine
   batch_size: 16
-  num_workers: 10
+  num_workers: 5

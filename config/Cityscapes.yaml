@@ -11,13 +11,13 @@ model_config:
 
 dataset_config:
   name: Cityscapes
-  path: /mnt/dataset/Cityscapes/
+  path: /mnt/datasets/Cityscapes/
   version: fine
   num_train_batches: 1.0 # 1.0 means 100% 
   num_eval_batches: 1.0
   batch_size: 6
   shuffle: yes
-  num_workers: 3
+  num_workers: 2
 
 train_config:
   loss: CrossEntropyLoss

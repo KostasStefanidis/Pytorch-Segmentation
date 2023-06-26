@@ -1,3 +1,4 @@
+name: pytorch-devcontainer
 services:
   pytorch:
     image: pytorch:2.0.0
@@ -10,21 +11,21 @@ services:
         GROUP_ID: 1003
       tags:
         - "pytorch:2.0.0"
-    container_name: pytorch
+    container_name: pytorch-kostas
     hostname: pytorch-container
     user: kstef
     tty: true
     stdin_open: true
-    shm_size: 64G
+    shm_size: 32G
     working_dir: /mnt/
     volumes:
       - /home/kstef/Pytorch-Segmentation:/mnt/Pytorch-Segmentation
-      - /home/kstef/dataset:/mnt/dataset:ro
+      - /data/datasets/:/mnt/datasets:ro
       - /home/kstef/logs/Pytorch-Segmentation:/mnt/logs
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ['0', '1']
+              device_ids: ['0']
               capabilities: [gpu]
