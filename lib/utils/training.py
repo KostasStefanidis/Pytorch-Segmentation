@@ -6,19 +6,18 @@ from torch.optim.lr_scheduler import ExponentialLR, ConstantLR, StepLR
 from torch.optim.lr_scheduler import CosineAnnealingLR, CosineAnnealingWarmRestarts
 
 def get_loss(loss: str):
-        if loss in ['CrossEntropy', 'CrossEntropyLoss', 'crossentropy']:
-            loss_fn = nn.CrossEntropyLoss()
-        # elif loss in ['Dice, DiceLoss']:
-        #     loss_fn = DiceLoss()
-        # elif loss in ['Hybrid', 'HybridLoss']:
-        #     loss_fn = HybridLoss()
-        # elif loss in ['rmi', 'RMI', 'RmiLoss', 'RMILoss']:
-        #     loss_fn = RMILoss()
-        return loss_fn
+    if loss in ['CrossEntropy', 'CrossEntropyLoss', 'crossentropy']:
+        loss_fn = nn.CrossEntropyLoss()
+    # elif loss in ['Dice, DiceLoss']:
+    #     loss_fn = DiceLoss()
+    # elif loss in ['Hybrid', 'HybridLoss']:
+    #     loss_fn = HybridLoss()
+    # elif loss in ['rmi', 'RMI', 'RmiLoss', 'RMILoss']:
+    #     loss_fn = RMILoss()
+    return loss_fn
 
 
-def get_optimizer(optimizer_config:dict, model: nn.Module):
-
+def get_optimizer(optimizer_config: dict, model: nn.Module):
     optimizer_name = optimizer_config.get('name', 'Adam')
     lr = optimizer_config.get('learnin_rate', 1e-3)
     weight_decay = optimizer_config.get('weight_decay', 0)
@@ -28,11 +27,11 @@ def get_optimizer(optimizer_config:dict, model: nn.Module):
     
     optimizer_dict = {
         'Adam' : Adam(trainable_params,
-                        lr=lr,
-                        weight_decay=weight_decay),
+                      lr=lr,
+                      weight_decay=weight_decay),
         'Adadelta' : Adadelta(trainable_params,
-                                lr=lr,
-                                weight_decay=weight_decay),
+                              lr=lr,
+                              weight_decay=weight_decay),
         'SGD' : SGD(trainable_params,
                     lr=lr,
                     momentum=momentum,
