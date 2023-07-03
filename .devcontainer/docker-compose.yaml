@@ -6,22 +6,22 @@ services:
       context: .
       dockerfile: pytorch-2.0.0.Dockerfile
       args:
-        USERNAME: kstef
-        USER_ID: 1003
-        GROUP_ID: 1003
+        USERNAME: ${USER}
+        USER_ID: ${UID}
+        GROUP_ID: ${GID}
       tags:
         - "pytorch:2.0.0"
-    container_name: pytorch-kostas
+    container_name: pytorch-${USER}
     hostname: pytorch-container
-    user: kstef
+    user: ${USER}
     tty: true
     stdin_open: true
     shm_size: 32G
     working_dir: /mnt/
     volumes:
-      - /home/kstef/Pytorch-Segmentation:/mnt/Pytorch-Segmentation
+      - ${HOME}/Pytorch-Segmentation:/mnt/Pytorch-Segmentation
       - /data/datasets/:/mnt/datasets:ro
-      - /home/kstef/logs/Pytorch-Segmentation:/mnt/logs
+      - ${HOME}/logs/Pytorch-Segmentation:/mnt/logs
     deploy:
       resources:
         reservations:
