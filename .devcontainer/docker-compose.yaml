@@ -6,9 +6,10 @@ services:
       context: .
       dockerfile: pytorch-2.0.0.Dockerfile
       args:
+        OS_USER_ID: ${UID}
+        OS_GROUP_ID: ${GID}
         USERNAME: ${USER}
-        USER_ID: ${UID}
-        GROUP_ID: ${GID}
+        GIT_USER_EMAIL: ${GIT_USER_EMAIL}
       tags:
         - "pytorch:2.0.0"
     container_name: pytorch-${USER}
@@ -20,7 +21,7 @@ services:
     working_dir: /mnt/
     volumes:
       - ${HOME}/Pytorch-Segmentation:/mnt/Pytorch-Segmentation
-      - /data/datasets/:/mnt/datasets:ro
+      - ${DATAPATH}:/mnt/datasets:ro
       - ${HOME}/logs/Pytorch-Segmentation:/mnt/logs
     deploy:
       resources:
