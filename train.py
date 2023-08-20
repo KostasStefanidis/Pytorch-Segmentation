@@ -97,7 +97,7 @@ def main():
 
     if use_profiler:
         profiler = SimpleProfiler(dirpath=f'{logs_dir}/profiler_logs',
-                                filename=f'{MODEL_TYPE}/{MODEL_NAME}')
+                                  filename=f'{MODEL_TYPE}/{MODEL_NAME}')
     else:
         profiler = None
 
