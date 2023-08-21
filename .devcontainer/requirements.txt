@@ -1,0 +1,10 @@
+ipython == 8.10.0
+ipykernel == 6.22.0
+matplotlib == 3.7.1
+scikit-learn == 1.2.2
+PyYAML == 6.0
+torcheval == 0.0.6
+torchsummary == 1.5.1
+torchmetrics == 0.11.4
+lightning == 2.0.2
+tensorboard-plugin-profile == 2.11.2
