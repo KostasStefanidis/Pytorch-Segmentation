@@ -1,6 +1,9 @@
 # VsCode folders
 *.vscode
 
+# Devcontainer files
+*/devcontainer-lock.json
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

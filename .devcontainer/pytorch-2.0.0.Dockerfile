@@ -25,7 +25,6 @@ USER ${OS_USER_ID}
 RUN pip install --no-cache-dir --upgrade pip \
 && pip install --no-cache-dir ipython==8.10.0 \
 && pip install --no-cache-dir ipykernel==6.22.0 \
-&& pip install --no-cache-dir pandas==2.0.0 \
 && pip install --no-cache-dir matplotlib==3.7.1 \
 && pip install --no-cache-dir -U scikit-learn==1.2.2 \
 && pip install --no-cache-dir PyYAML==6.0
