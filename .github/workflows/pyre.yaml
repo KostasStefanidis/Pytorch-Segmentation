@@ -2,9 +2,9 @@ name: Pyre
 
 on:
   push:
-    branches: [main]
+    branches: [ master, main ]
   pull_request:
-    branches: [main]
+    branches: [ master, main ]
 
 jobs:
   pyre:
