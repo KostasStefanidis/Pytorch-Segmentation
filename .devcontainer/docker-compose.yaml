@@ -12,7 +12,7 @@ services:
         GIT_USER_EMAIL: ${GIT_USER_EMAIL}
       tags:
         - "pytorch:2.0.0"
-    container_name: pytorch-${USER}
+    container_name: pytorch
     hostname: pytorch-container
     user: ${USER}
     tty: true
