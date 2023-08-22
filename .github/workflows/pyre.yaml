@@ -3,8 +3,12 @@ name: Pyre
 on:
   push:
     branches: [ master, main ]
+    paths: 
+      - "**.py"
   pull_request:
     branches: [ master, main ]
+    paths: 
+      - "**.py"
 
 jobs:
   pyre:
