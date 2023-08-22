@@ -11,8 +11,12 @@ name: Hadolint
 on:
   push:
     branches: [ master, main ]
+    paths: 
+      - "**Dockerfile"
   pull_request:
     branches: [ master, main ]
+    paths: 
+      - "**Dockerfile"
 
 permissions:
   contents: read
