@@ -12,11 +12,11 @@ on:
   push:
     branches: [ master, main ]
     paths: 
-      - "**Dockerfile"
+      - '**Dockerfile'
   pull_request:
     branches: [ master, main ]
     paths: 
-      - "**Dockerfile"
+      - '**Dockerfile'
 
 permissions:
   contents: read
