@@ -11,9 +11,17 @@ name: Pysa
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: 
+      # - master
+      - main
+    paths: 
+      - '**.py'
   pull_request:
-    branches: [ master, main, develop ]
+    branches: 
+      # - master
+      - main
+    paths: 
+      - '**.py'
 
 permissions:
   contents: read
