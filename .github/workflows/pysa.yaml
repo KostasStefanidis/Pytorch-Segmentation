@@ -34,7 +34,7 @@ jobs:
           submodules: true
       
       - name: Run Pysa Action
-        uses: facebook/pysa-action
+        uses: facebook/pysa-action@0.0.1
         with:
           repo-directory: './'
           requirements-path: '.devcontainer/requirements.txt'
