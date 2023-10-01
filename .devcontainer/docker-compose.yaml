@@ -25,9 +25,9 @@ services:
       - ${HOME}/logs/Pytorch-Segmentation:/mnt/logs
     healthcheck:
       test: /usr/bin/nvidia-smi || exit 1
-      interval: 10m
+      interval: 5m
       timeout: 5s
-      retries: 5
+      retries: 2
     deploy:
       restart_policy:
         condition: on-failure
