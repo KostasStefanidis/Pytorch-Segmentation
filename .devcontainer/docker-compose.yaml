@@ -23,7 +23,17 @@ services:
       - ${HOME}/Pytorch-Segmentation:/mnt/Pytorch-Segmentation
       - ${DATAPATH}:/mnt/datasets:ro
       - ${HOME}/logs/Pytorch-Segmentation:/mnt/logs
+    healthcheck:
+      test: /usr/bin/nvidia-smi || exit 1
+      interval: 10m
+      timeout: 5s
+      retries: 5
     deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+        window: 1m30s
       resources:
         reservations:
           devices:

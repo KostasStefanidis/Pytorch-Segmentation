@@ -19,7 +19,6 @@
 				"ms-python.python",
 				"redhat.vscode-yaml",
 				"RSIP-Vision.nvidia-smi-plus",
-				"github.vscode-github-actions",
 				"ms-azuretools.vscode-docker"
 			]
 		}
