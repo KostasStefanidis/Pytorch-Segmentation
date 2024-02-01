@@ -1,0 +1,19 @@
+{
+  "features": {
+    "ghcr.io/devcontainers-contrib/features/act:1": {
+      "version": "1.0.14",
+      "resolved": "ghcr.io/devcontainers-contrib/features/act@sha256:3ec9cb495f2b7daba5af1657d40604815bc38af7e0c05a0578eae1c979d4b73a",
+      "integrity": "sha256:3ec9cb495f2b7daba5af1657d40604815bc38af7e0c05a0578eae1c979d4b73a"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "2.8.0",
+      "resolved": "ghcr.io/devcontainers/features/docker-in-docker@sha256:3b862172222f48494b050e5e515799ef49f8b607332791fbfdda845e5b0ed91a",
+      "integrity": "sha256:3b862172222f48494b050e5e515799ef49f8b607332791fbfdda845e5b0ed91a"
+    },
+    "ghcr.io/devcontainers/features/github-cli": {
+      "version": "1.0.11",
+      "resolved": "ghcr.io/devcontainers/features/github-cli@sha256:464564228ccdd6028f01f8a62a3cfbaf76e9ba7953b29ac0e53ba2c262604312",
+      "integrity": "sha256:464564228ccdd6028f01f8a62a3cfbaf76e9ba7953b29ac0e53ba2c262604312"
+    }
+  }
+}

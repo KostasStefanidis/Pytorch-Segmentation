@@ -1,0 +1,41 @@
+{
+	"name": "Pytorch 2.0 CPU",
+	"dockerComposeFile": "docker-compose.yaml",
+	"service": "pytorch",
+	"shutdownAction": "none",
+	"workspaceFolder": "/mnt/Pytorch-Segmentation",
+	"containerUser": "${localEnv:USER}",
+
+	"customizations": {
+		"vscode": {
+			"settings": {},
+			"extensions": [
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"ms-python.pylint",
+				"KevinRose.vsc-python-indent",
+				"ms-toolsai.jupyter",
+				"magicstack.MagicPython",
+				"redhat.vscode-yaml",
+				"github.vscode-github-actions",
+				"GitHub.copilot",
+				"GitHub.copilot-chat",
+				"ms-azuretools.vscode-docker"
+			]
+		}
+	},
+
+	// Features to add to the dev container. More info: https://containers.dev/features.
+	"features": {
+		"ghcr.io/devcontainers/features/github-cli": {},
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {},
+		"ghcr.io/devcontainers-contrib/features/act:1": {}
+	},
+	
+	"hostRequirements": {
+        "cpus": 4,
+        "memory": "16gb",
+        "storage": "32gb",
+		"gpu": false
+    }
+}

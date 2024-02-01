@@ -1,4 +1,4 @@
-name: pytorch-devcontainer
+# name: pytorch-devcontainer
 services:
   pytorch:
     image: pytorch:2.0.0
@@ -6,18 +6,13 @@ services:
       context: .
       dockerfile: pytorch-2.0.0.Dockerfile
       args:
-        OS_USER_ID: ${UID}
-        OS_GROUP_ID: ${GID}
         USERNAME: ${USER}
-        GIT_USER_EMAIL: ${GIT_USER_EMAIL}
-      tags:
-        - "pytorch:2.0.0"
     container_name: pytorch
     hostname: pytorch-container
     user: ${USER}
     tty: true
     stdin_open: true
-    shm_size: 32G
+    shm_size: 8G
     working_dir: /mnt/
     volumes:
       - ${HOME}/Pytorch-Segmentation:/mnt/Pytorch-Segmentation
@@ -38,5 +33,5 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ['0']
+              device_ids: ['0', '1']
               capabilities: [gpu]
