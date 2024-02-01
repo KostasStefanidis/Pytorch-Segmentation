@@ -3,7 +3,7 @@ services:
   pytorch:
     image: pytorch:2.0.0
     build:
-      context: .
+      context: ../
       dockerfile: pytorch-2.0.0.Dockerfile
       args:
         USERNAME: ${USER}
@@ -12,7 +12,7 @@ services:
     user: ${USER}
     tty: true
     stdin_open: true
-    shm_size: 8G
+    shm_size: 64G
     working_dir: /mnt/
     volumes:
       - ${HOME}/Pytorch-Segmentation:/mnt/Pytorch-Segmentation

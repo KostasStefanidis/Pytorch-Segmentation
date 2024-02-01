@@ -20,8 +20,8 @@
 				"github.vscode-github-actions",
 				"GitHub.copilot",
 				"GitHub.copilot-chat",
-				"RSIP-Vision.nvidia-smi-plus",
-				"ms-azuretools.vscode-docker"
+				"ms-azuretools.vscode-docker",
+				"RSIP-Vision.nvidia-smi-plus"
 			]
 		}
 	},

@@ -2,7 +2,7 @@
 *.vscode
 
 # Devcontainer files
-*/devcontainer-lock.json
+*devcontainer-lock.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
