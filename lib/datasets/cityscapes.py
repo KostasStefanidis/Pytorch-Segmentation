@@ -1,29 +1,26 @@
+from collections.abc import Callable
+from typing import Any
 import torch
-import torchvision
 from torch import Tensor
-import lightning.pytorch as pl
-from torchvision.datasets import Cityscapes
-from torch.utils.data import DataLoader
-from torchvision import transforms
-import numpy as np
-import random
-from typing import Tuple, List, Optional, Callable, Any, Union
-from PIL import Image
-from torchvision.models import RegNet_Y_16GF_Weights, RegNet_Y_32GF_Weights
-from torchvision.models import RegNet_Y_8GF_Weights, EfficientNet_V2_M_Weights
-from torchvision.models import EfficientNet_V2_M_Weights, EfficientNet_V2_S_Weights
-from torchvision.models import MobileNet_V3_Large_Weights, ResNet50_Weights, ResNet101_Weights
-from torchvision import datapoints
-import torchvision.transforms.v2 as transformsv2
 from torch.utils.data.distributed import DistributedSampler
-from torch.utils.data import get_worker_info
+from torch.utils.data import DataLoader
+from PIL import Image
+from torchvision import tv_tensors
+from torchvision.datasets import Cityscapes
+import torchvision.transforms.v2 as transformsv2
+# from torchvision.models import RegNet_Y_16GF_Weights, RegNet_Y_32GF_Weights
+# from torchvision.models import RegNet_Y_8GF_Weights, EfficientNet_V2_M_Weights
+# from torchvision.models import EfficientNet_V2_M_Weights, EfficientNet_V2_S_Weights
+# from torchvision.models import MobileNet_V3_Large_Weights, ResNet50_Weights, ResNet101_Weights
+import lightning.pytorch as pl
+# from torch.utils.data import get_worker_info
 from lib.utils.augmentation import get_augmentations
 from lib.datasets.utils import deterministic_init_worker
 
 
-_IGNORE_IDS = [-1,0,1,2,3,4,5,6,9,10,14,15,16,18,29,30]
-_EVAL_IDS =   [7,8,11,12,13,17,19,20,21,22,23,24,25,26,27,28,31,32,33]
-_TRAIN_IDS =  [0,1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18]
+_IGNORE_IDS = (-1,0,1,2,3,4,5,6,9,10,14,15,16,18,29,30)
+_EVAL_IDS =   (7,8,11,12,13,17,19,20,21,22,23,24,25,26,27,28,31,32,33)
+_TRAIN_IDS =  (0,1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15,16,17,18)
 
 
 class EvalToTrainIds():
@@ -37,8 +34,8 @@ class EvalToTrainIds():
         self.train_ids = train_ids
             
     def __call__(self, target):    
-        for id in self.ignore_ids:
-            target = torch.where(target==id, 34, target)
+        for ignore_id in self.ignore_ids:
+            target = torch.where(target==ignore_id, 34, target)
         for train_id, eval_id in zip(self.train_ids, self.eval_ids):
             target = torch.where(target==eval_id, train_id, target)
         target = torch.where(target==34, 19, target)
@@ -52,9 +49,9 @@ class OneHot():
     def __init__(self, channels) -> None:
         self.channels = channels
     
-    def __call__(self, input: Tensor) -> Any:
-        one_hot_output = torch.zeros(self.channels, *input.shape[1:], dtype=torch.float32)
-        one_hot_output.scatter_(0, input.to(dtype=torch.int64), 1)
+    def __call__(self, input_tensor: Tensor) -> Any:
+        one_hot_output = torch.zeros(self.channels, *input_tensor.shape[1:], dtype=torch.float32)
+        one_hot_output.scatter_(0, input_tensor.to(dtype=torch.int64), 1)
         return one_hot_output
     
     def __repr__(self) -> str:
@@ -88,19 +85,19 @@ class CityscapesTestSplit(Cityscapes):
                          target_transform=None, 
                          transforms=None)
         
-    def __getitem__(self, index: int) -> Tuple[Any, Any]:
+    def __getitem__(self, index: int) -> tuple[Any, Any]:
         """
         Args:
             index (int): Index
         Returns:
-            tuple: (image, filename): The input image to be inserted to the model for prediction and the 
-            filename of that image.
+            tuple: (image, filename): The input image to be inserted to the model 
+            for prediction and the filename of that image.
         """
-        image_path = self.images[index]
+        image_path: str = self.images[index]
         image_filename = image_path.split('/')[-1]
         
         image = Image.open(image_path).convert("RGB")
-        image = datapoints.Image(image)
+        image = tv_tensors.Image(image)
         
         if self.transform is not None:
             image = self.transform(image)
@@ -113,7 +110,7 @@ class CityscapesTestSplit(Cityscapes):
 
 class CityscapesDataset(Cityscapes):
     '''
-    This class wraps image and target in datapoints.Image and datapoints.Mask
+    This class wraps image and target in tv_tensors.Image and tv_tensors.Mask
     objects respectively in order to use tranforms.v2 API for augmentation. The augmentations 
     are performed first followed by transform and target_transform, applied to image and target respectively
     in order to, for example, normalize image values to [0,1] and to convert target to one-hot encoding.
@@ -122,7 +119,7 @@ class CityscapesDataset(Cityscapes):
                  root: str, 
                  split: str = "train", 
                  mode: str = "fine", 
-                 target_type: List[str] | str = "semantic", 
+                 target_type: list[str] | str = "semantic", 
                  transform: Callable[..., Any] | None = None, 
                  target_transform: Callable[..., Any] | None = None, 
                  augmentations: Callable[..., Any] | None = None
@@ -131,7 +128,7 @@ class CityscapesDataset(Cityscapes):
         super().__init__(root, split, mode, target_type, transform, target_transform)
         self.augmentations = augmentations
 
-    def __getitem__(self, index: int) -> Tuple[datapoints.Image, datapoints.Mask]:
+    def __getitem__(self, index: int) -> tuple[tv_tensors.Image, tv_tensors.Mask]:
         
         image = Image.open(self.images[index]).convert("RGB")
 
@@ -146,8 +143,8 @@ class CityscapesDataset(Cityscapes):
 
         target = tuple(targets) if len(targets) > 1 else targets[0]
         
-        # Wrap image and target in datapoints Image and Mask objects 
-        image, target = datapoints.Image(image), datapoints.Mask(target)
+        # Wrap image and target in tv_tensors Image and Mask objects 
+        image, target = tv_tensors.Image(image), tv_tensors.Mask(target)
         
         if self.augmentations is not None:
             image, target = self.augmentations(image, target)
@@ -202,32 +199,37 @@ class CityscapesDataModule(pl.LightningDataModule):
         
     def setup(self, stage: str) -> None:
         if stage == 'fit':
-            self.train_ds = CityscapesDataset(root=self.datapath, 
-                                             split='train', 
-                                             mode=self.mode,
-                                             target_type=self.target_type,
-                                             transform=self.transform,
-                                             target_transform=self.target_transform,
-                                             augmentations=self.augmentations)
+            self.train_ds = CityscapesDataset(
+                root=self.datapath, 
+                split='train', 
+                mode=self.mode,
+                target_type=self.target_type,
+                transform=self.transform,
+                target_transform=self.target_transform,
+                augmentations=self.augmentations
+            )
             
-            self.val_ds = CityscapesDataset(root=self.datapath, 
-                                             split='val', 
-                                             mode=self.mode,
-                                             target_type=self.target_type,
-                                             transform=self.transform,
-                                             target_transform=self.target_transform)
+            self.val_ds = CityscapesDataset(
+                root=self.datapath, 
+                split='val', 
+                mode=self.mode,
+                target_type=self.target_type,
+                transform=self.transform,
+                target_transform=self.target_transform
+            )
         
         if stage == 'test':
-            self.test_ds = CityscapesDataset(root=self.datapath, 
-                                             split='val', 
-                                             mode=self.mode,
-                                             target_type=self.target_type,
-                                             transform=self.transform,
-                                             target_transform=self.target_transform)
+            self.test_ds = CityscapesDataset(
+                root=self.datapath, 
+                split='val', 
+                mode=self.mode,
+                target_type=self.target_type,
+                transform=self.transform,
+                target_transform=self.target_transform
+            )
         
         if stage == 'predict':
-            self.predict_ds = CityscapesTestSplit(root=self.datapath,
-                                                  transform=self.transform)
+            self.predict_ds = CityscapesTestSplit(root=self.datapath, transform=self.transform)
     
     def train_dataloader(self):
         if self.deterministic:
@@ -270,20 +272,20 @@ class CityscapesDataModule(pl.LightningDataModule):
                           pin_memory=self.pin_memory)
 
     
-def get_preprocessing(self, backbone, weight_version):
+# def get_preprocessing(self, backbone, weight_version):
 
-    preprocessing_options = {
-        'default': DEFAULT_TRANSFORM,
-        #'ResNet': resnet.preprocess_input,
-        #'ResNetV2' : resnet_v2.preprocess_input,
-        #'MobileNet' : mobilenet.preprocess_input,
-        #'MobileNetV2' : mobilenet_v2.preprocess_input,
-        'MobileNetV3' : MobileNet_V3_Large_Weights.IMAGENET1K_V2.transforms(),
-        #'EfficientNet' : efficientnet.preprocess_input,
-        'EfficientNetV2' : EfficientNet_V2_M_Weights.IMAGENET1K_V1.transforms(),
-        'RegNet' : RegNet_Y_8GF_Weights.IMAGENET1K_V2.transforms()
-    }
-    return preprocessing_options[self.preprocessing]
+#     preprocessing_options = {
+#         'default': DEFAULT_TRANSFORM,
+#         #'ResNet': resnet.preprocess_input,
+#         #'ResNetV2' : resnet_v2.preprocess_input,
+#         #'MobileNet' : mobilenet.preprocess_input,
+#         #'MobileNetV2' : mobilenet_v2.preprocess_input,
+#         'MobileNetV3' : MobileNet_V3_Large_Weights.IMAGENET1K_V2.transforms(),
+#         #'EfficientNet' : efficientnet.preprocess_input,
+#         'EfficientNetV2' : EfficientNet_V2_M_Weights.IMAGENET1K_V1.transforms(),
+#         'RegNet' : RegNet_Y_8GF_Weights.IMAGENET1K_V2.transforms()
+#     }
+#     return preprocessing_options[self.preprocessing]
 
 
 # dictionary that contains the mapping of the class numbers to rgb color values

@@ -1,10 +1,10 @@
+from argparse import ArgumentParser
+import os
+import yaml
 import torch
 import lightning.pytorch as pl
 from lib.datasets.cityscapes import CityscapesDataModule
 from lib.models.base_module import SegmentationModule
-from argparse import ArgumentParser
-import yaml
-import os
 from lib.utils.callbacks import CityscapesPredictionWriter
 
 def main():

@@ -1,3 +1,5 @@
+import random
+from argparse import ArgumentParser
 import lightning.pytorch as pl
 import torch
 from lightning.pytorch.callbacks import ModelCheckpoint, StochasticWeightAveraging
@@ -5,13 +7,11 @@ from lightning.pytorch.callbacks import LearningRateMonitor, EarlyStopping
 from lightning.pytorch.callbacks import RichProgressBar, RichModelSummary
 from lightning.pytorch.loggers import TensorBoardLogger
 from lightning.pytorch.profilers import SimpleProfiler
-from torchsummary import summary
 import numpy as np
 import yaml
 from lib.datasets.cityscapes import CityscapesDataModule
 from lib.models.base_module import SegmentationModule
-import yaml
-from argparse import ArgumentParser
+# from torchsummary import summary
 
 def parse_args():
     parser = ArgumentParser(description='Train segmentation network')
@@ -32,7 +32,6 @@ def main():
     use_early_stopping = args.early_stopping
     
     if args.seed > 0:
-        import random
         print('Seeding with', args.seed)
         random.seed(args.seed)
         np.random.seed(args.seed)
