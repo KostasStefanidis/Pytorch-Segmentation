@@ -1,7 +1,7 @@
-FROM pytorch/pytorch:2.0.0-cuda11.7-cudnn8-runtime
+ARG VARIANT="2.2.0-cuda12.1-cudnn8-runtime"
+FROM pytorch/pytorch:${VARIANT}
 
 ARG USERNAME
-
 RUN useradd --shell /bin/bash --create-home --no-user-group ${USERNAME}
 
 # install usefull linux packages
@@ -29,3 +29,6 @@ RUN pip install --no-cache-dir torcheval==0.0.6 \
 && pip install --no-cache-dir torchmetrics==0.11.4 \
 && pip install --no-cache-dir lightning==2.0.2 \
 && pip install --no-cache-dir -U tensorboard-plugin-profile==2.11.2
+
+# USER root
+# RUN apt-get update && apt-get install -y libc6=2.28

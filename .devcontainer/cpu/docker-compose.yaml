@@ -1,13 +1,14 @@
 # name: pytorch-devcontainer
 services:
-  pytorch:
-    image: pytorch:2.0.0
+  pytorch-cpu:
+    image: pytorch:2.2.0
     build:
       context: ../
-      dockerfile: pytorch-2.0.0.Dockerfile
+      dockerfile: pytorch.Dockerfile
       args:
+        VARIANT: 2.2.0-cuda12.1-cudnn8-runtime
         USERNAME: ${USER}
-    container_name: pytorch
+    container_name: pytorch-cpu
     hostname: pytorch-container
     user: ${USER}
     tty: true
