@@ -2,12 +2,12 @@ name: Pyre
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master, main ]
     paths: 
       - '**.py'
       - '.github/workflows/pyre.yaml'
   pull_request:
-    branches: [ main ]
+    branches: [ master, main ]
     paths: 
       - '**.py'
       - '.github/workflows/pyre.yaml'

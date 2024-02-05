@@ -10,12 +10,12 @@ name: Hadolint
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master, main ]
     paths: 
       - '**Dockerfile'
       - '.github/workflows/hadolint.yaml'
   pull_request:
-    branches: [ main ]
+    branches: [ master, main ]
     paths: 
       - '**Dockerfile'
       - '.github/workflows/hadolint.yaml'

@@ -11,12 +11,12 @@ name: Pysa
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master, main ]
     paths: 
       - '**.py'
       - '.github/workflows/pysa.yaml'
   pull_request:
-    branches: [ main ]
+    branches: [ master, main ]
     paths: 
       - '**.py'
       - '.github/workflows/pysa.yaml'
@@ -27,7 +27,7 @@ permissions:
 jobs:
   pysa:
     runs-on: ubuntu-latest
-    
+
     permissions:
       actions: read
       contents: read
