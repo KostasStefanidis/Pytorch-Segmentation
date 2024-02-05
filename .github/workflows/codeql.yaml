@@ -13,13 +13,15 @@ name: CodeQL
 
 on:
   push:
-    branches: [ master, main ]
+    branches: [ main ]
     paths: 
       - '**.py'
+      - '.github/workflows/codeql.yaml'
   pull_request:
-    branches: [ master, main ]
+    branches: [ main ]
     paths: 
       - '**.py'
+      - '.github/workflows/codeql.yaml'
 
 jobs:
   analyze:

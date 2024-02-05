@@ -11,29 +11,27 @@ name: Pysa
 
 on:
   push:
-    branches: 
-      # - master
-      - main
+    branches: [ main ]
     paths: 
       - '**.py'
+      - '.github/workflows/pysa.yaml'
   pull_request:
-    branches: 
-      # - master
-      - main
+    branches: [ main ]
     paths: 
       - '**.py'
+      - '.github/workflows/pysa.yaml'
 
 permissions:
   contents: read
 
 jobs:
   pysa:
+    runs-on: ubuntu-latest
+    
     permissions:
       actions: read
       contents: read
       security-events: write
-    
-    runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
