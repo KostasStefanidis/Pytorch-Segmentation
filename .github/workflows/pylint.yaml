@@ -32,5 +32,3 @@ jobs:
         python-version: ["3.10" , "3.11", "3.12"]
     
     uses: KostasStefanidis/github-workflows/.github/workflows/pylint.yaml@main
-    with:
-      python_version: ${{ matrix.python-version }}
