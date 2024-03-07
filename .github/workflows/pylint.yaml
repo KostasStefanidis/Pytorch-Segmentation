@@ -17,6 +17,8 @@ on:
 
 jobs:
   pylint:
+    # When calling a reusable workflow that needs elevated permissions, these permissions
+    # must be explicitly specified in the calling workflow.
     permissions:
       # required for all workflows
       security-events: write
@@ -27,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.10" , "3.11", "3.12"]
     
     uses: KostasStefanidis/github-workflows/.github/workflows/pylint.yaml@main
     with:
