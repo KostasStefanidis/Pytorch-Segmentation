@@ -22,7 +22,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        dockerfile: [ '**/Dockerfile' ]
+        dockerfile:
+          # List of all Dockerfiles to be linted
+          - .devcontainer/pytorch.Dockerfile
     
     uses: KostasStefanidis/github-workflows/.github/workflows/hadolint.yaml@main
     with:
