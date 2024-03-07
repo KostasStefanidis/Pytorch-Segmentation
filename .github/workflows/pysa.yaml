@@ -1,12 +1,3 @@
-# This workflow integrates Python Static Analyzer (Pysa) with
-# GitHub's Code Scanning feature.
-#
-# Python Static Analyzer (Pysa) is a security-focused static
-# analysis tool that tracks flows of data from where they
-# originate to where they terminate in a dangerous location.
-#
-# See https://pyre-check.org/docs/pysa-basics/
-
 name: Pysa
 
 on:
@@ -22,27 +13,10 @@ on:
       - '.github/workflows/pysa.yaml'
 
 permissions:
+  actions: read
   contents: read
+  security-events: write
 
 jobs:
   pysa:
-    runs-on: ubuntu-latest
-
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-      
-      - name: Run Pysa Action
-        uses: facebook/pysa-action@0.0.1
-        with:
-          repo-directory: './'
-          requirements-path: '.devcontainer/requirements.txt'
-          infer-types: true
-          include-default-sapp-filters: true
+    uses: KostasStefanidis/github-workflows/.github/workflows/pysa.yaml@main
