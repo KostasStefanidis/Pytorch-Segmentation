@@ -1,11 +1,3 @@
-# This workflow uses actions that are not certified by GitHub.
-# They are provided by a third-party and are governed by
-# separate terms of service, privacy policy, and support
-# documentation.
-# hadoint is a Dockerfile linter written in Haskell
-# that helps you build best practice Docker images.
-# More details at https://github.com/hadolint/hadolint
-
 name: Hadolint
 
 on:
@@ -21,38 +13,39 @@ on:
       - '.github/workflows/hadolint.yaml'
 
 permissions:
-  contents: read
+  contents: read # for actions/checkout to fetch code
+  security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
+  actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
 
 jobs:
-  hadolint:
-    name: Run hadolint scanning
+  discover-dockerfiles:
+    name: Discover Dockerfiles in repository
     runs-on: ubuntu-latest
-    permissions:
-      contents: read # for actions/checkout to fetch code
-      security-events: write # for github/codeql-action/upload-sarif to upload SARIF results
-      actions: read # only required for a private repository by github/codeql-action/upload-sarif to get the Action run status
+    outputs:
+      dockerfiles: ${{ steps.discover.outputs.dockerfiles }}
+    steps:
+      - name: Checkout code
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Discover Dockerfiles
+        id: discover
+        run: |
+          echo "dockerfiles=["$(git ls-files | grep 'Dockerfile$' | sed 's/.*/"&"/' | paste -sd, -)"]" >> $GITHUB_OUTPUT
+  
+  hadolint:
+    needs: discover-dockerfiles
     
     strategy:
       fail-fast: false
       matrix:
-        dockerfile:
-          # List all repo Dockerfiles to be scanned
-          - .devcontainer/pytorch.Dockerfile
+        dockerfile: ${{ needs.discover-dockerfiles.outputs.dockerfiles }}          
     
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run hadolint
-        uses: hadolint/hadolint-action@v3.1.0
-        with:
-          dockerfile: ${{ matrix.dockerfile }}
-          format: sarif
-          output-file: hadolint-results.sarif
-          no-fail: true
-
-      - name: Upload analysis results to GitHub
-        uses: github/codeql-action/upload-sarif@v2
-        with:
-          sarif_file: hadolint-results.sarif
-          wait-for-processing: true
+        run: |
+          echo ${{ matrix.dockerfile }}
+    # uses: KostasStefanidis/github-workflows/.github/workflows/hadolint.yaml@main
+    # with:
+    #   dockerfile: ${{ matrix.dockerfile }}
