@@ -31,7 +31,7 @@ jobs:
       - name: Discover Dockerfiles
         id: discover
         run: |
-          echo "dockerfiles=["$(git ls-files | grep 'Dockerfile$' | sed 's/.*/"&"/' | paste -sd, -)"]" >> $GITHUB_OUTPUT
+          echo "dockerfiles=$(git ls-files | grep 'Dockerfile$' | sed 's/.*/"&"/' | paste -sd, -)" >> $GITHUB_OUTPUT
   
   hadolint:
     needs: discover-dockerfiles
@@ -39,7 +39,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        dockerfile: ${{ needs.discover-dockerfiles.outputs.dockerfiles }}          
+        dockerfile: ${{ needs.discover-dockerfiles.outputs.dockerfiles }}
     
     runs-on: ubuntu-latest
     steps:
